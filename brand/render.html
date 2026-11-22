@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Gloock; src: url("file:///tmp/fonts/fontsource-gloock-5.3.0/files/gloock-latin-400-normal.woff2"); }
+@font-face { font-family: Geist; font-weight: 400; src: url("file:///tmp/fonts/fontsource-geist-sans-5.3.0/files/geist-sans-latin-400-normal.woff2"); }
+@font-face { font-family: Geist; font-weight: 500; src: url("file:///tmp/fonts/fontsource-geist-sans-5.3.0/files/geist-sans-latin-500-normal.woff2"); }
+:root { --ink:#0A1222; --paper:#EEF1F7; --engrave:#8E9CB8; --a:#9AE6D8; --b:#B6A6FF; --c:#FFD3A3; }
+* { margin:0; padding:0; box-sizing:border-box; }
+body { background: var(--ink); }
+.card { position: relative; overflow: hidden; background: var(--ink); }
+#icon { width: 800px; height: 800px; }
+#banner { width: 1500px; height: 500px; }
+svg.ros { position: absolute; }
+.glow { position:absolute; border-radius:50%; filter: blur(30px);
+  background: radial-gradient(closest-side, rgba(182,166,255,.28), rgba(154,230,216,.10) 60%, transparent); }
+.t { position:absolute; inset:0; display:grid; place-items:center; font: 400 340px/1 Gloock; color: var(--paper);
+  text-shadow: 0 0 40px rgba(10,18,34,.9), 0 0 12px rgba(10,18,34,.9); padding-bottom: 18px; }
+.copy { position:absolute; left: 96px; top: 78px; width: 1000px; }
+.copy h1 { font: 400 78px/1.0 Gloock; letter-spacing:-0.02em; color: var(--paper); }
+.copy p { margin-top: 24px; font: 400 26px/1.4 Geist; color: #B9C3D8; }
+.thread { position:absolute; left:0; right:0; bottom:0; height:6px; background: linear-gradient(90deg,var(--a),var(--b) 45%,var(--c) 80%,var(--a)); }
+.chip { position:absolute; right: 64px; top: 52px; display:flex; gap:10px; align-items:center; font: 500 20px/1 Geist; color: var(--engrave); }
+.chip i { width:10px; height:10px; border-radius:50%; background: var(--c); box-shadow: 0 0 0 5px rgba(255,211,163,.18); }
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <linearGradient id="foil" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0" stop-color="#9AE6D8"/><stop offset=".45" stop-color="#B6A6FF"/><stop offset=".8" stop-color="#FFD3A3"/><stop offset="1" stop-color="#9AE6D8"/>
+  </linearGradient></defs></svg>
+
+<div class="card" id="icon">
+  <div class="glow" style="inset:60px"></div>
+  <svg class="ros" id="ros-icon" viewBox="0 0 600 600" style="inset:0;width:800px;height:800px"></svg>
+  <div class="t">T</div>
+</div>
+
+<div style="height:40px"></div>
+
+<div class="card" id="banner">
+  <div class="glow" style="left:930px;top:-120px;width:740px;height:740px"></div>
+  <svg class="ros" id="ros-banner" viewBox="0 0 600 600" style="left:900px;top:-150px;width:800px;height:800px"></svg>
+  <div class="copy">
+    <h1>Every coin on Robinhood<br>is money.</h1>
+    <p>AI agents pay any API with any token. Merchants get exact USDG.</p>
+  </div>
+  <div class="thread"></div>
+</div>
+
+<script>
+function gcd(a,b){return b?gcd(b,a%b):a}
+function hypo(R,r,d,sc,steps=2200,cx=300,cy=300){const turns=r/gcd(R,r);let p="";
+  for(let i=0;i<=steps;i++){const t=i/steps*Math.PI*2*turns;
+    const x=cx+sc*((R-r)*Math.cos(t)+d*Math.cos((R-r)/r*t));const y=cy+sc*((R-r)*Math.sin(t)-d*Math.sin((R-r)/r*t));
+    p+=(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1);}return p}
+function rosette(id, specs){let out="";for(const [R,r,d,sc,copies,step,w,o,rot] of specs){const path=hypo(R,r,d,sc);
+  for(let k=0;k<copies;k++) out+=`<path d="${path}" transform="rotate(${(rot+k*step).toFixed(2)} 300 300)" fill="none" stroke="url(#foil)" stroke-width="${w}" opacity="${o}"/>`;}
+  document.getElementById(id).innerHTML=out}
+const SPEC=[[120,45,66,1.6,10,1.5,.4,.5,0],[105,35,28,2.2,8,2.2,.35,.38,12],[84,21,16,1.25,6,3,.45,.55,7]];
+rosette("ros-icon", SPEC.map(s=>{const t=[...s];t[6]=s[6]*1.25;t[7]=Math.min(1,s[7]*1.35);return t}));
+rosette("ros-banner", SPEC);
+</script>
+</body></html>

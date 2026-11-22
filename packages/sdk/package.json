@@ -1,0 +1,1 @@
+{"name":"@tender/sdk","version":"0.1.0","type":"module","main":"src/index.ts","dependencies":{"viem":"^2.21.0"},"peerDependencies":{"express":"^4.22.3"}}

@@ -1,0 +1,48 @@
+# Tender facilitator on Fly.io
+app = "paywithtender-facilitator"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  CHAIN_ID = "4663"
+  RPC_URL = "https://rpc.mainnet.chain.robinhood.com"
+  SETTLEMENT_ADDRESS = "0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4"
+  SWAP_ADAPTER = "uniswap"
+  SLIPPAGE_BPS = "500"
+  MAX_PRICE_IMPACT = "0.05"
+  SETTLE_GAS_SWAP = "420000"
+  SETTLE_GAS_USDG = "190000"
+  GAS_MARGIN_BPS = "2000"
+  GAS_TOLERANCE_BPS = "3000"
+  WETH_ADDRESS = "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73"
+  EXACT_ENABLED = "false"
+  SPONSOR_ENABLED = "true"
+  SPONSOR_MAX_WEI = "100000000000000"
+  SPONSOR_DAILY_MAX = "200"
+  PORT = "4021"
+  DATA_DIR = "/data"
+  # secrets (set with fly secrets): RELAYER_PRIVATE_KEY, UNISWAP_API_KEY
+
+[[mounts]]
+  source = "tender_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 4021
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "20s"
+    interval = "30s"
+    method = "GET"
+    path = "/healthz"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

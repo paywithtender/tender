@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tender — every coin on Robinhood is money</title>
+<meta name="description" content="Tender is an x402 payment rail for Robinhood Chain. AI agents pay any API with any token they hold. Merchants always receive exact USDG.">
+<meta property="og:title" content="Tender — every coin on Robinhood is money">
+<meta property="og:description" content="AI agents pay any API with any token. You receive exact USDG.">
+<meta property="og:url" content="https://paywithtender.com">
+<link rel="canonical" href="https://paywithtender.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0A1222;        /* intaglio navy, the page */
+    --plate: #121D33;      /* raised surfaces */
+    --rule: #22304D;       /* hairlines */
+    --engrave: #8E9CB8;    /* secondary text, engraved lines */
+    --paper: #EEF1F7;      /* primary text */
+    --signal: #7CF0C5;     /* live / settled */
+    --foil-a: #9AE6D8;
+    --foil-b: #B6A6FF;
+    --foil-c: #FFD3A3;
+    --foil: linear-gradient(110deg, var(--foil-a), var(--foil-b) 45%, var(--foil-c) 80%, var(--foil-a));
+    --serif: "Gloock", "Times New Roman", serif;
+    --sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+    --wrap: 1180px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--ink);
+    color: var(--paper);
+    font: 400 17px/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--foil-a); outline-offset: 3px; border-radius: 4px; }
+  .wrap { width: min(100% - 48px, var(--wrap)); margin-inline: auto; }
+
+  /* ---------------------------------------------------------- nav */
+  nav.top {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--ink) 78%, transparent);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border-bottom: 1px solid color-mix(in srgb, var(--rule) 60%, transparent);
+  }
+  nav.top .wrap { display: flex; align-items: center; gap: 32px; height: 68px; }
+  .mark { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 400 24px/1 var(--serif); letter-spacing: -0.01em; }
+  .mark svg { width: 26px; height: 26px; }
+  nav.top ul { display: flex; gap: 28px; list-style: none; margin-left: auto; font-size: 15px; color: var(--engrave); }
+  nav.top ul a { text-decoration: none; transition: color .2s; }
+  nav.top ul a:hover { color: var(--paper); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 46px; padding: 0 22px; border-radius: 999px;
+    font: 500 15px/1 var(--sans); text-decoration: none; cursor: pointer; border: 0;
+    transition: transform .15s, box-shadow .2s, background .2s;
+  }
+  .btn-foil { background: var(--foil); background-size: 200% 100%; color: var(--ink); box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset; }
+  .btn-foil:hover { background-position: 100% 0; box-shadow: 0 8px 32px -8px color-mix(in srgb, var(--foil-b) 70%, transparent); }
+  .btn-ghost { background: transparent; color: var(--paper); box-shadow: 0 0 0 1px var(--rule) inset; }
+  .btn-ghost:hover { box-shadow: 0 0 0 1px var(--engrave) inset; }
+  .btn:active { transform: translateY(1px); }
+  nav.top .btn { height: 38px; padding: 0 16px; font-size: 14px; }
+
+  /* ---------------------------------------------------------- hero */
+  .hero { position: relative; padding: 64px 0 88px; overflow: hidden; }
+  .hero .wrap { display: grid; grid-template-columns: 1.05fr 1fr; align-items: center; gap: 40px; position: relative; z-index: 2; }
+  .status { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; color: var(--engrave); margin-bottom: 28px; }
+  .status i { width: 8px; height: 8px; border-radius: 50%; background: var(--foil-c); box-shadow: 0 0 0 4px color-mix(in srgb, var(--foil-c) 18%, transparent); }
+  .status.live i { background: var(--signal); box-shadow: 0 0 0 4px color-mix(in srgb, var(--signal) 18%, transparent); animation: pulse 2.4s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--signal) 0%, transparent); } }
+
+  h1 {
+    font: 400 clamp(52px, 7.4vw, 104px)/0.95 var(--serif);
+    letter-spacing: -0.025em;
+    max-width: 11ch;
+    text-wrap: balance;
+  }
+  .lede { margin-top: 28px; max-width: 34em; font-size: 19px; line-height: 1.55; color: color-mix(in srgb, var(--paper) 78%, var(--engrave)); }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 40px; }
+
+  .stage { position: relative; aspect-ratio: 1; width: 100%; max-width: 560px; justify-self: end; }
+  .rosette { position: absolute; inset: -14%; width: 128%; height: 128%; }
+  .stage::before { /* soft foil glow behind the engraving */
+    content: ""; position: absolute; inset: 8%; border-radius: 50%;
+    background: radial-gradient(closest-side, color-mix(in srgb, var(--foil-b) 22%, transparent), color-mix(in srgb, var(--foil-a) 8%, transparent) 60%, transparent);
+    filter: blur(20px);
+  }
+  .rosette g { transform-origin: 300px 300px; }
+  .spin-a { animation: spin 140s linear infinite; }
+  .spin-b { animation: spin 200s linear infinite reverse; }
+  .spin-c { animation: spin 90s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* receipt: the one moment */
+  .receipt {
+    position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+    width: min(320px, 78%);
+    background: color-mix(in srgb, var(--plate) 88%, transparent);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-radius: 18px;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--paper) 10%, transparent) inset, 0 40px 80px -30px rgba(0,0,0,.7);
+    padding: 22px 22px 18px;
+    overflow: hidden;
+  }
+  .receipt::before { /* foil strip, like a banknote security thread */
+    content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--foil);
+  }
+  .r-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px; }
+  .r-head b { font: 400 20px/1 var(--serif); }
+  .r-head span { font: 400 12px/1 var(--mono); color: var(--engrave); }
+  .r-row { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; font-size: 14px; border-top: 1px dashed color-mix(in srgb, var(--rule) 90%, transparent); }
+  .r-row:first-of-type { border-top: 0; }
+  .r-row dt { color: var(--engrave); }
+  .r-row dd { font: 500 14px/1.4 var(--mono); text-align: right; }
+  .r-row.total dd { font-size: 17px; background: var(--foil); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .r-foot { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; color: var(--engrave); }
+  .r-foot i { width: 7px; height: 7px; border-radius: 50%; background: var(--signal); }
+  .r-foot code { font: 400 12px/1 var(--mono); margin-left: auto; color: color-mix(in srgb, var(--engrave) 80%, transparent); }
+  .receipt dl { transition: opacity .35s ease, filter .35s ease; }
+  .receipt.swap dl { opacity: 0; filter: blur(4px); }
+
+  /* ---------------------------------------------------------- sections */
+  section { padding: 120px 0; }
+  .sec-head { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: end; margin-bottom: 64px; }
+  h2 { font: 400 clamp(36px, 4.6vw, 60px)/1.02 var(--serif); letter-spacing: -0.02em; max-width: 14ch; text-wrap: balance; }
+  .sec-head p { color: var(--engrave); max-width: 32em; font-size: 18px; }
+
+  /* steps (a real sequence) */
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); position: relative; list-style: none; }
+  .steps::before { content: ""; position: absolute; left: 0; right: 0; top: 23px; height: 1px; background: linear-gradient(90deg, var(--foil-a), var(--foil-b), var(--foil-c)); opacity: .5; }
+  .step { padding-right: 40px; position: relative; }
+  .step .num {
+    width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--ink); box-shadow: 0 0 0 1px var(--rule) inset;
+    font: 400 20px/1 var(--serif); margin-bottom: 28px; position: relative;
+  }
+  .step h3 { font: 500 21px/1.3 var(--sans); letter-spacing: -0.01em; margin-bottom: 10px; }
+  .step p { color: var(--engrave); font-size: 16px; max-width: 30ch; }
+
+  /* code */
+  .code-wrap { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: 56px; align-items: start; }
+  .code-wrap > *, .hero .wrap > * { min-width: 0; }
+  .code-copy p { color: var(--engrave); font-size: 18px; margin-top: 20px; max-width: 26em; }
+  .tabs { display: inline-flex; padding: 4px; border-radius: 999px; box-shadow: 0 0 0 1px var(--rule) inset; margin-bottom: 14px; }
+  .tabs button {
+    font: 500 14px/1 var(--sans); color: var(--engrave); background: none; border: 0; cursor: pointer;
+    height: 36px; padding: 0 16px; border-radius: 999px; transition: background .2s, color .2s;
+  }
+  .tabs button[aria-selected="true"] { background: var(--plate); color: var(--paper); box-shadow: 0 0 0 1px var(--rule) inset; }
+  .term {
+    background: #060C18; border-radius: 16px; box-shadow: 0 0 0 1px var(--rule) inset;
+    position: relative; overflow: hidden;
+  }
+  .term-bar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--rule); font: 400 13px/1 var(--mono); color: var(--engrave); }
+  .copy { font: 500 13px/1 var(--sans); color: var(--engrave); background: none; border: 0; cursor: pointer; padding: 6px 8px; border-radius: 6px; }
+  .copy:hover { color: var(--paper); background: var(--plate); }
+  pre { padding: 22px 22px 26px; overflow-x: auto; font: 400 14px/1.75 var(--mono); color: #C8D2E6; tab-size: 2; }
+  pre[hidden] { display: none; }
+  .k { color: var(--foil-b); } .s { color: var(--foil-a); } .c { color: #5D6B88; } .n { color: var(--foil-c); }
+
+  /* fees */
+  .fees { border-top: 1px solid var(--rule); }
+  .fee { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: baseline; padding: 30px 0; border-bottom: 1px solid var(--rule); }
+  .fee h3 { font: 500 21px/1.3 var(--sans); letter-spacing: -0.01em; }
+  .fee p { color: var(--engrave); font-size: 16px; margin-top: 4px; max-width: 46ch; }
+  .fee .price { font: 400 clamp(32px, 4vw, 48px)/1 var(--serif); letter-spacing: -0.02em; text-align: right; }
+  .fee .price.foil { background: var(--foil); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  /* feed */
+  .ledger { background: var(--plate); border-radius: 22px; box-shadow: 0 0 0 1px var(--rule) inset; overflow: hidden; }
+  .totals { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--rule); }
+  .totals div { padding: 26px 28px; }
+  .totals div + div { border-left: 1px solid var(--rule); }
+  .totals dt { color: var(--engrave); font-size: 14px; }
+  .totals dd { font: 400 40px/1.1 var(--serif); letter-spacing: -0.02em; margin-top: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th { text-align: left; font: 400 13px/1 var(--sans); color: var(--engrave); padding: 16px 28px; border-bottom: 1px solid var(--rule); }
+  td { padding: 15px 28px; border-bottom: 1px solid color-mix(in srgb, var(--rule) 60%, transparent); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td.num, th.num { text-align: right; }
+  td.mono { font: 400 14px/1 var(--mono); }
+  td .tok { display: inline-flex; align-items: center; gap: 10px; font-weight: 500; }
+  td .tok i { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 600 10px/1 var(--sans); font-style: normal; color: var(--ink); }
+  tr.fresh { animation: fresh 1.6s ease-out; }
+  @keyframes fresh { from { background: color-mix(in srgb, var(--signal) 14%, transparent); } }
+  .ledger-note { padding: 16px 28px; font-size: 14px; color: var(--engrave); border-top: 1px solid var(--rule); display: flex; gap: 10px; align-items: center; }
+  .ledger-note i { width: 7px; height: 7px; border-radius: 50%; background: var(--foil-c); flex: none; }
+  .ledger-note.live i { background: var(--signal); }
+  .table-scroll { overflow-x: auto; }
+
+  /* safety */
+  .safety { display: grid; grid-template-columns: repeat(2, 1fr); gap: 56px 72px; }
+  .safety h3 { font: 500 21px/1.3 var(--sans); letter-spacing: -0.01em; margin-bottom: 10px; display: flex; gap: 14px; align-items: center; }
+  .safety h3 svg { width: 22px; height: 22px; flex: none; }
+  .safety p { color: var(--engrave); max-width: 40ch; }
+
+  /* closing */
+  .closing { text-align: center; padding: 140px 0 120px; position: relative; overflow: hidden; }
+  .closing h2 { margin: 0 auto; max-width: 16ch; font-size: clamp(44px, 6vw, 84px); }
+  .closing p { color: var(--engrave); margin: 24px auto 0; max-width: 32em; font-size: 18px; }
+  .closing .cta { justify-content: center; }
+  .band { position: absolute; left: 0; top: 0; width: 100%; height: 120px; opacity: .35; pointer-events: none; }
+
+  footer { border-top: 1px solid var(--rule); padding: 40px 0 56px; color: var(--engrave); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 24px 40px; align-items: center; }
+  footer .mark { font-size: 20px; color: var(--paper); }
+  footer ul { display: flex; gap: 24px; list-style: none; }
+  footer ul a { text-decoration: none; }
+  footer ul a:hover { color: var(--paper); }
+  footer small { flex-basis: 100%; font-size: 13px; color: color-mix(in srgb, var(--engrave) 75%, transparent); }
+
+  /* ---------------------------------------------------------- responsive */
+  @media (max-width: 960px) {
+    .hero { padding: 40px 0 80px; }
+    .hero .wrap { grid-template-columns: 1fr; }
+    .stage { justify-self: center; max-width: 480px; margin-top: 12px; }
+    .sec-head, .code-wrap { grid-template-columns: 1fr; gap: 20px; }
+    .steps { grid-template-columns: 1fr; gap: 44px; }
+    .steps::before { left: 23px; right: auto; top: 0; bottom: 0; width: 1px; height: auto; background: linear-gradient(180deg, var(--foil-a), var(--foil-b), var(--foil-c)); }
+    .step { padding: 0 0 0 76px; }
+    .step .num { position: absolute; left: 0; top: -6px; }
+    .safety { grid-template-columns: 1fr; gap: 40px; }
+    section { padding: 88px 0; }
+    nav.top ul { display: none; }
+    nav.top .btn { margin-left: auto; }
+  }
+  @media (max-width: 640px) {
+    body { font-size: 16px; }
+    .receipt { width: min(340px, 90%); padding: 18px 18px 14px; }
+    .r-row dd { font-size: 13px; }
+    .r-row.total dd { font-size: 15px; }
+    pre { font-size: 12.5px; padding: 18px 16px 22px; }
+    .totals { grid-template-columns: 1fr 1fr; }
+    .totals div:last-child { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--rule); }
+    .totals dd { font-size: 32px; }
+    th, td { padding-inline: 18px; }
+    .fee { grid-template-columns: 1fr; gap: 10px; }
+    .fee .price { text-align: left; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    html { scroll-behavior: auto; }
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="foil" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9AE6D8"/>
+      <stop offset=".45" stop-color="#B6A6FF"/>
+      <stop offset=".8" stop-color="#FFD3A3"/>
+      <stop offset="1" stop-color="#9AE6D8"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<nav class="top" aria-label="Main">
+  <div class="wrap">
+    <a class="mark" href="#top" aria-label="Tender home">
+      <svg viewBox="0 0 26 26" aria-hidden="true" id="mark-svg"></svg>
+      Tender
+    </a>
+    <ul>
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#build">Developers</a></li>
+      <li><a href="#fees">Fees</a></li>
+      <li><a href="#ledger">Live payments</a></li>
+    </ul>
+    <a class="btn btn-foil" href="#build">Accept payments</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <p class="status" id="status"><i></i><span>Launching on Robinhood Chain</span></p>
+      <h1>Every coin on Robinhood is money.</h1>
+      <p class="lede">Tender is an x402 payment rail for Robinhood Chain. AI agents pay any API with any token they hold. You always receive exact USDG.</p>
+      <div class="cta">
+        <a class="btn btn-foil" href="#build">Accept payments</a>
+        <a class="btn btn-ghost" href="#how">See how it works</a>
+      </div>
+    </div>
+
+    <div class="stage" aria-label="Example Tender payment receipt">
+      <svg class="rosette" viewBox="0 0 600 600" aria-hidden="true">
+        <g class="spin-a" id="ros-a"></g>
+        <g class="spin-b" id="ros-b"></g>
+        <g class="spin-c" id="ros-c"></g>
+      </svg>
+      <div class="receipt" id="receipt">
+        <div class="r-head"><b>Payment</b><span id="r-serial">T-000142</span></div>
+        <dl>
+          <div class="r-row"><dt>Agent paid</dt><dd id="r-in">50.25 RHDOGE</dd></div>
+          <div class="r-row"><dt>Swapped on</dt><dd>Uniswap</dd></div>
+          <div class="r-row"><dt>Fee incl. gas</dt><dd id="r-fee">0.004450 USDG</dd></div>
+          <div class="r-row total"><dt>API received</dt><dd id="r-out">0.050000 USDG</dd></div>
+        </dl>
+        <div class="r-foot"><i></i><span id="r-state">Settled in one transaction</span><code id="r-tx">0x8f3a…c41e</code></div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="how">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>One signature. Any token. Exact dollars.</h2>
+      <p>Agents shouldn't need to hold stablecoins to buy data, compute or tools. With Tender, whatever they already hold works as payment.</p>
+    </div>
+    <ol class="steps" role="list">
+      <li class="step">
+        <div class="num" aria-hidden="true">1</div>
+        <h3>The agent signs once</h3>
+        <p>It asks your API for a price, gets a quote in its own token, and signs one permission that fixes who gets paid and how much.</p>
+      </li>
+      <li class="step">
+        <div class="num" aria-hidden="true">2</div>
+        <h3>Tender swaps it</h3>
+        <p>In a single transaction the token is swapped to USDG on Uniswap. If the swap comes up short, nothing moves.</p>
+      </li>
+      <li class="step">
+        <div class="num" aria-hidden="true">3</div>
+        <h3>You get exact USDG</h3>
+        <p>Your API receives the exact price you set, then serves the request. Unused tokens go straight back to the agent.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section id="build">
+  <div class="wrap code-wrap">
+    <div class="code-copy">
+      <h2>A few lines on each side.</h2>
+      <p>Put a price on any route of your API. Agents using the Tender client pay automatically, in USDG or in any token with real liquidity on Robinhood Chain.</p>
+      <div class="cta">
+        <a class="btn btn-ghost" href="#" id="docs-link">Read the docs</a>
+      </div>
+    </div>
+    <div>
+      <div class="tabs" role="tablist" aria-label="Code examples">
+        <button role="tab" aria-selected="true" aria-controls="code-merchant" id="tab-merchant">Charge for an API</button>
+        <button role="tab" aria-selected="false" aria-controls="code-agent" id="tab-agent">Pay from an agent</button>
+      </div>
+      <div class="term">
+        <div class="term-bar"><span id="term-file">server.ts</span><button class="copy" id="copy">Copy</button></div>
+<pre id="code-merchant" role="tabpanel" aria-labelledby="tab-merchant"><span class="k">import</span> express <span class="k">from</span> <span class="s">"express"</span>;
+<span class="k">import</span> { tenderPaywall } <span class="k">from</span> <span class="s">"@tender/sdk"</span>;
+
+<span class="k">const</span> app = express();
+
+app.use(tenderPaywall({
+  payTo: <span class="s">"0xYourWallet"</span>,
+  facilitator: <span class="s">"https://facilitator.paywithtender.com"</span>,
+  routes: {
+    <span class="s">"GET /premium"</span>: { price: <span class="s">"$0.05"</span> },
+  },
+}));
+
+app.get(<span class="s">"/premium"</span>, (req, res) =&gt; res.json({ data: <span class="s">"…"</span> }));</pre>
+<pre id="code-agent" role="tabpanel" aria-labelledby="tab-agent" hidden><span class="k">import</span> { wrapFetchWithTender } <span class="k">from</span> <span class="s">"@tender/sdk"</span>;
+
+<span class="k">const</span> pay = wrapFetchWithTender(fetch, {
+  account,                    <span class="c">// the agent's wallet</span>
+  chain: robinhood,
+  payWith: <span class="s">"0xAnyToken"</span>,      <span class="c">// leave out to pay in USDG</span>
+  maxUsdgPerCall: <span class="n">100_000n</span>,   <span class="c">// never more than $0.10</span>
+  maxFeePerCall: <span class="n">20_000n</span>,     <span class="c">// skip if fees top $0.02</span>
+});
+
+<span class="k">const</span> res = <span class="k">await</span> pay(<span class="s">"https://api.example.com/premium"</span>);</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="fees">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Simple fees, quoted before you sign.</h2>
+      <p>Every payment covers the network gas it takes to settle, shown upfront and capped on-chain at $1. Swaps add 0.5%. Merchants always get the full price.</p>
+    </div>
+    <div class="fees">
+      <div class="fee"><div><h3>Pay in USDG</h3><p>Settled straight to the merchant. The agent pays only the network gas, around a cent when the chain is quiet.</p></div><div class="price">Gas only</div></div>
+      <div class="fee"><div><h3>Pay in any other token</h3><p>Swapped to USDG on Uniswap in the same transaction. Charged on top of your price, so you always get the full amount.</p></div><div class="price foil">0.5% + gas</div></div>
+      <div class="fee"><div><h3>Pay in $TENDER</h3><p>No conversion fee once the token is live, just the network gas.</p></div><div class="price">Gas only</div></div>
+      <div class="fee"><div><h3>First approval for a new token</h3><p>Agents with no ETH get just enough gas covered for their one-time setup.</p></div><div class="price">Covered</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="ledger">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Every payment, on the record.</h2>
+      <p>Each payment settles on Robinhood Chain and shows up here as it happens.</p>
+    </div>
+    <div class="ledger">
+      <dl class="totals">
+        <div><dt>Payments</dt><dd id="t-count">0</dd></div>
+        <div><dt>USDG settled</dt><dd id="t-usdg">$0.00</dd></div>
+        <div><dt>Tokens accepted</dt><dd id="t-tokens">0</dd></div>
+      </dl>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Paid with</th><th class="num">Amount</th><th class="num">API received</th><th>Transaction</th><th class="num">When</th></tr></thead>
+          <tbody id="feed"></tbody>
+        </table>
+      </div>
+      <p class="ledger-note" id="feed-note"><i></i><span>Example data. The live feed switches on at mainnet launch.</span></p>
+    </div>
+  </div>
+</section>
+
+<section id="safety">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Built so nobody can take more than was signed.</h2>
+      <p>The settlement contract is small, open source and checks every payment before money moves.</p>
+    </div>
+    <div class="safety">
+      <div>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="url(#foil)" stroke-width="1.6" aria-hidden="true"><path d="M4 17c3-1 4-6 7-6s2 4 5 4 3-3 4-4"/><path d="M4 21h16"/></svg>Your signature sets the terms</h3>
+        <p>The agent's signature fixes the merchant, the price and the fee. Nobody in the middle can change where the money goes.</p>
+      </div>
+      <div>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="url(#foil)" stroke-width="1.6" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3"/><path d="M8 12h8"/></svg>Nothing sits in the contract</h3>
+        <p>Tokens pass through in one transaction. The contract holds no balance between payments, so there's nothing to drain.</p>
+      </div>
+      <div>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="url(#foil)" stroke-width="1.6" aria-hidden="true"><path d="M5 12a7 7 0 1 0 2-5"/><path d="M5 4v4h4"/></svg>Short swaps undo themselves</h3>
+        <p>If a swap returns less than the exact price plus fee, the whole payment reverts and the agent keeps its tokens.</p>
+      </div>
+      <div>
+        <h3><svg viewBox="0 0 24 24" fill="none" stroke="url(#foil)" stroke-width="1.6" aria-hidden="true"><path d="M9 8l-4 4 4 4M15 8l4 4-4 4"/></svg>Open source</h3>
+        <p>The contract, facilitator and SDK are public. Read them, run your own facilitator, or fork it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="closing">
+  <svg class="band" viewBox="0 0 1200 120" preserveAspectRatio="none" aria-hidden="true" id="band"></svg>
+  <div class="wrap">
+    <h2>Let agents pay with what they hold.</h2>
+    <p>Add Tender to your API in an afternoon and start accepting every liquid token on Robinhood Chain.</p>
+    <div class="cta">
+      <a class="btn btn-foil" href="#build">Accept payments</a>
+      <a class="btn btn-ghost" href="#" id="gh-link">View on GitHub</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <a class="mark" href="#top" aria-label="Tender home"><svg viewBox="0 0 26 26" aria-hidden="true" class="mark-copy"></svg>Tender</a>
+    <ul>
+      <li><a href="#" id="f-docs">Docs</a></li>
+      <li><a href="#" id="f-gh">GitHub</a></li>
+      <li><a href="#" id="f-x">X</a></li>
+    </ul>
+    <small>Built on Robinhood Chain with x402 and Uniswap. Tender is an independent project and is not affiliated with Robinhood Markets, Inc. Payments are final on-chain transactions.</small>
+  </div>
+</footer>
+
+<script>
+/* ------------------------------------------------------------------ config */
+const CONFIG = {
+  facilitator: "https://facilitator.paywithtender.com", // live payments feed
+  facilitatorFallback: "https://paywithtender-facilitator.fly.dev",
+  live: true,
+  contract: "0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4",
+  explorer: "https://robinhoodchain.blockscout.com/tx/",
+  links: { docs: "https://github.com/paywithtender", github: "https://github.com/paywithtender", x: "https://x.com/tenderpays" },
+};
+
+/* ------------------------------------------------------------------ guilloché */
+// Hypotrochoid curves, the engraving pattern used on banknotes.
+function hypo(R, r, d, scale, steps = 1400, cx = 300, cy = 300) {
+  const turns = r / gcd(R, r);
+  let p = "";
+  for (let i = 0; i <= steps; i++) {
+    const t = (i / steps) * Math.PI * 2 * turns;
+    const x = cx + scale * ((R - r) * Math.cos(t) + d * Math.cos(((R - r) / r) * t));
+    const y = cy + scale * ((R - r) * Math.sin(t) - d * Math.sin(((R - r) / r) * t));
+    p += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+  }
+  return p;
+}
+function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+function draw(id, specs) {
+  // each spec: [R, r, d, scale, copies, stepDeg, width, opacity] — many rotated copies make the fine moiré of engraving
+  const g = document.getElementById(id);
+  let out = "";
+  for (const [R, r, d, sc, copies, step, w, o] of specs) {
+    const path = hypo(R, r, d, sc, 1800);
+    for (let k = 0; k < copies; k++) {
+      out += `<path d="${path}" transform="rotate(${(k * step).toFixed(2)} 300 300)" fill="none" stroke="url(#foil)" stroke-width="${w}" opacity="${o}"/>`;
+    }
+  }
+  g.innerHTML = out;
+}
+draw("ros-a", [[120, 45, 66, 1.6, 10, 1.5, .35, .42]]);
+draw("ros-b", [[105, 35, 28, 2.2, 8, 2.2, .3, .3]]);
+draw("ros-c", [[84, 21, 16, 1.25, 6, 3, .4, .45]]);
+
+// small rosette for the logo
+document.querySelectorAll("#mark-svg, .mark-copy").forEach((svg) => {
+  svg.innerHTML = [0, 6, 12].map((a) => `<path d="${hypo(10, 3, 4.2, 1.05, 500, 13, 13)}" transform="rotate(${a} 13 13)" fill="none" stroke="url(#foil)" stroke-width=".7"/>`).join("");
+});
+
+// wave band above the closing section
+(function band() {
+  const svg = document.getElementById("band");
+  let out = "";
+  for (let k = 0; k < 9; k++) {
+    let p = "";
+    for (let x = 0; x <= 1200; x += 6) {
+      const y = 60 + Math.sin(x / 38 + k * 0.7) * (18 + k * 2) * Math.cos(x / 260);
+      p += (x ? "L" : "M") + x + " " + y.toFixed(1);
+    }
+    out += `<path d="${p}" fill="none" stroke="url(#foil)" stroke-width=".6" opacity="${0.9 - k * 0.08}"/>`;
+  }
+  svg.innerHTML = out;
+})();
+
+/* ------------------------------------------------------------------ links + status */
+for (const [id, key] of [["docs-link", "docs"], ["f-docs", "docs"], ["gh-link", "github"], ["f-gh", "github"], ["f-x", "x"]]) {
+  document.getElementById(id).href = CONFIG.links[key];
+}
+if (CONFIG.live) {
+  const s = document.getElementById("status");
+  s.classList.add("live");
+  s.querySelector("span").textContent = "Live on Robinhood Chain";
+}
+
+/* ------------------------------------------------------------------ code tabs */
+const tabs = { merchant: ["tab-merchant", "code-merchant", "server.ts"], agent: ["tab-agent", "code-agent", "agent.ts"] };
+function showTab(which) {
+  for (const [k, [tab, panel]] of Object.entries(tabs)) {
+    const on = k === which;
+    document.getElementById(tab).setAttribute("aria-selected", on);
+    document.getElementById(panel).hidden = !on;
+  }
+  document.getElementById("term-file").textContent = tabs[which][2];
+}
+document.getElementById("tab-merchant").onclick = () => showTab("merchant");
+document.getElementById("tab-agent").onclick = () => showTab("agent");
+document.getElementById("copy").onclick = async (e) => {
+  const panel = document.querySelector("pre:not([hidden])");
+  try { await navigator.clipboard.writeText(panel.innerText); e.target.textContent = "Copied"; }
+  catch { e.target.textContent = "Select and copy"; }
+  setTimeout(() => (e.target.textContent = "Copy"), 1600);
+};
+
+/* ------------------------------------------------------------------ receipt + ledger */
+const EXAMPLES = [
+  { symbol: "RHDOGE", amountIn: "50.25", usdg: 0.05 },
+  { symbol: "ETH", amountIn: "0.0000168", usdg: 0.05 },
+  { symbol: "FROG", amountIn: "1,412.9", usdg: 0.12 },
+  { symbol: "MOON", amountIn: "8.04", usdg: 0.01 },
+  { symbol: "GLOBE", amountIn: "322.6", usdg: 0.25 },
+];
+const TOKEN_HUES = ["#9AE6D8", "#B6A6FF", "#FFD3A3", "#F2A7C3", "#A9D1FF"];
+const hue = (s) => TOKEN_HUES[[...s].reduce((a, c) => a + c.charCodeAt(0), 0) % TOKEN_HUES.length];
+const fmtUsd = (n) => "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const randTx = () => "0x" + Array.from({ length: 4 }, () => Math.floor(Math.random() * 16).toString(16)).join("") + "…" +
+  Array.from({ length: 4 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+const ago = (ms) => { const s = Math.max(1, Math.round((Date.now() - ms) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)}m ago` : `${Math.round(s / 3600)}h ago`; };
+
+let serial = 142;
+const receipt = document.getElementById("receipt");
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function showReceipt(p) {
+  const fee = p.fee ?? p.usdg * 0.005 + 0.0042; // real fee when live, else 0.5% + example gas
+  const apply = () => {
+    document.getElementById("r-serial").textContent = "T-" + String(serial).padStart(6, "0");
+    document.getElementById("r-in").textContent = `${p.amountIn} ${p.symbol}`;
+    document.getElementById("r-fee").textContent = `${fee.toFixed(6)} USDG`;
+    document.getElementById("r-out").textContent = `${p.usdg.toFixed(6)} USDG`;
+    document.getElementById("r-tx").textContent = p.tx || randTx();
+    receipt.classList.remove("swap");
+  };
+  if (reduce) return apply();
+  receipt.classList.add("swap");
+  setTimeout(apply, 350);
+}
+
+const feedEl = document.getElementById("feed");
+function row(p, fresh) {
+  const tr = document.createElement("tr");
+  if (fresh) tr.className = "fresh";
+  const tx = p.tx || randTx();
+  const href = p.txFull ? CONFIG.explorer + p.txFull : null;
+  tr.innerHTML = `
+    <td><span class="tok"><i style="background:${hue(p.symbol)}">${p.symbol.slice(0, 1)}</i>${p.symbol}</span></td>
+    <td class="num mono">${p.amountIn}</td>
+    <td class="num mono">${p.usdg.toFixed(2)} USDG</td>
+    <td class="mono">${href ? `<a href="${href}">${tx}</a>` : tx}</td>
+    <td class="num" data-time="${p.time}">${ago(p.time)}</td>`;
+  return tr;
+}
+function setTotals(count, usdg, tokens) {
+  document.getElementById("t-count").textContent = count.toLocaleString("en-US");
+  document.getElementById("t-usdg").textContent = fmtUsd(usdg);
+  document.getElementById("t-tokens").textContent = tokens;
+}
+setInterval(() => document.querySelectorAll("[data-time]").forEach((td) => (td.textContent = ago(+td.dataset.time))), 5000);
+
+let feedBase = CONFIG.facilitator;
+async function getFeed() {
+  try {
+    const r = await fetch(feedBase + "/feed");
+    if (!r.ok) throw new Error(r.status);
+    return await r.json();
+  } catch (e) {
+    if (feedBase === CONFIG.facilitatorFallback) throw e;
+    feedBase = CONFIG.facilitatorFallback;
+    return (await fetch(feedBase + "/feed")).json();
+  }
+}
+async function liveFeed() {
+  const { totals, recent } = await getFeed();
+  if (!recent.length) throw new Error("no payments yet");
+  const rows = recent.map((e) => ({
+    symbol: e.symbol,
+    amountIn: (Number(e.amountIn) / 10 ** (e.decimals ?? 18)).toLocaleString("en-US", { maximumSignificantDigits: 5 }),
+    usdg: Number(e.usdg) / 1e6,
+    fee: Number(e.fee) / 1e6,
+    tx: e.tx.slice(0, 6) + "…" + e.tx.slice(-4),
+    txFull: e.tx,
+    time: e.time,
+  }));
+  feedEl.replaceChildren(...rows.slice(0, 8).map((p) => row(p)));
+  setTotals(totals.payments, Number(totals.usdg) / 1e6, new Set(recent.map((e) => e.token)).size);
+  if (rows[0]) { serial = totals.payments; showReceipt({ ...rows[0], tx: rows[0].tx }); }
+  const note = document.getElementById("feed-note");
+  note.classList.add("live");
+  note.querySelector("span").textContent = "Live from Robinhood Chain. Updates every few seconds.";
+}
+
+function exampleFeed() {
+  let count = 1284, total = 412.37;
+  const seed = [];
+  for (let i = 0; i < 6; i++) seed.push({ ...EXAMPLES[(i + 1) % EXAMPLES.length], time: Date.now() - (i + 1) * 47000, tx: randTx() });
+  feedEl.replaceChildren(...seed.map((p) => row(p)));
+  setTotals(count, total, 37);
+  let i = 0;
+  const tick = () => {
+    const p = { ...EXAMPLES[i++ % EXAMPLES.length], time: Date.now(), tx: randTx() };
+    serial++; count++; total += p.usdg;
+    showReceipt(p);
+    feedEl.prepend(row(p, true));
+    while (feedEl.children.length > 6) feedEl.lastElementChild.remove();
+    setTotals(count, total, 37);
+  };
+  if (!reduce) setInterval(tick, 4200);
+}
+
+if (CONFIG.facilitator) {
+  liveFeed().then(() => setInterval(() => liveFeed().catch(() => {}), 6000)).catch(exampleFeed);
+} else {
+  exampleFeed();
+}
+</script>
+</body>
+</html>

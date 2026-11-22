@@ -1,0 +1,9 @@
+node_modules
+.env
+data
+contracts/artifacts
+contracts/cache
+contracts/typechain-types
+contracts/deployments/*.json
+!contracts/deployments/.gitkeep
+.wallets

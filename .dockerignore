@@ -1,0 +1,16 @@
+# Never ship secrets or local state into the server image
+.wallets
+**/.env
+**/.env.*
+!**/.env.example
+**/data
+node_modules
+**/node_modules
+contracts/artifacts
+contracts/cache
+contracts/deployments
+e2e
+site
+brand
+*.bat
+*.zip

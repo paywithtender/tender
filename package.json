@@ -1,0 +1,11 @@
+{
+  "name": "tender",
+  "private": true,
+  "workspaces": ["contracts", "packages/sdk", "packages/facilitator"],
+  "scripts": {
+    "test:contracts": "npm --workspace contracts run test",
+    "test:e2e": "node --import tsx e2e/run.ts",
+    "facilitator": "npm --workspace packages/facilitator run start"
+  },
+  "devDependencies": { "tsx": "^4.19.0", "typescript": "^5.6.0" }
+}
