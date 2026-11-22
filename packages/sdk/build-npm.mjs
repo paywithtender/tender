@@ -5,15 +5,19 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const out = path.join(here, "npm");
-fs.rmSync(path.join(here, "dist"), { recursive: true, force: true });
-fs.rmSync(out, { recursive: true, force: true });
+// Empty the folders instead of deleting them, so an open terminal inside them can't block the build.
+function clean(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+  for (const f of fs.readdirSync(dir)) fs.rmSync(path.join(dir, f), { recursive: true, force: true, maxRetries: 5 });
+}
+clean(path.join(here, "dist"));
+clean(out);
 execSync("npx tsc -p tsconfig.build.json", { cwd: here, stdio: "inherit" });
-fs.mkdirSync(out);
 fs.cpSync(path.join(here, "dist"), path.join(out, "dist"), { recursive: true });
 fs.copyFileSync(path.join(here, "README.md"), path.join(out, "README.md"));
 const pkg = {
   name: "@paywithtender/sdk",
-  version: process.env.SDK_VERSION || "0.1.0",
+  version: process.env.SDK_VERSION || "0.1.1",
   description: "Pay any x402 API with any token on Robinhood Chain. Merchants get exact USDG.",
   license: "MIT",
   homepage: "https://paywithtender.com",
