@@ -11,7 +11,7 @@ subtask(TASK_COMPILE_SOLIDITY_GET_SOLC_BUILD, async (args, hre, runSuper) => {
       compilerPath: require.resolve("solc/soljson.js"),
       isSolcJs: true,
       version: SOLC_VERSION,
-      longVersion: require("solc/package.json").version,
+      longVersion: "0.8.28+commit.7893614a", // exact build, needed for explorer verification
     };
   }
   return runSuper();
@@ -34,6 +34,20 @@ module.exports = {
     version: SOLC_VERSION,
     settings: { optimizer: { enabled: true, runs: 1000 }, viaIR: true, evmVersion: "cancun" },
   },
+  etherscan: {
+    apiKey: { robinhood: "blockscout" }, // Blockscout needs no real key
+    customChains: [
+      {
+        network: "robinhood",
+        chainId: 4663,
+        urls: {
+          apiURL: "https://robinhoodchain.blockscout.com/api",
+          browserURL: "https://robinhoodchain.blockscout.com",
+        },
+      },
+    ],
+  },
+  sourcify: { enabled: false },
   networks: {
     robinhood: {
       url: process.env.ROBINHOOD_RPC || "https://rpc.mainnet.chain.robinhood.com",
