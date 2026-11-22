@@ -7,3 +7,5 @@ contracts/typechain-types
 contracts/deployments/*.json
 !contracts/deployments/.gitkeep
 .wallets
+packages/sdk/dist
+packages/sdk/npm

@@ -39,7 +39,7 @@ First-time setup per token is one `approve(Permit2)`. If the agent has no ETH, `
 
 ```ts
 import express from "express";
-import { tenderPaywall } from "@tender/sdk";
+import { tenderPaywall } from "@paywithtender/sdk";
 
 const app = express();
 app.use(tenderPaywall({
@@ -53,7 +53,7 @@ app.get("/premium", (req, res) => res.json({ data: "…" }));
 ## Agent integration
 
 ```ts
-import { wrapFetchWithTender } from "@tender/sdk";
+import { wrapFetchWithTender } from "@paywithtender/sdk";
 const pay = wrapFetchWithTender(fetch, {
   account,                        // viem LocalAccount
   chain: robinhood,               // chain id 4663

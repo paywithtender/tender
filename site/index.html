@@ -356,7 +356,7 @@
       <div class="term">
         <div class="term-bar"><span id="term-file">server.ts</span><button class="copy" id="copy">Copy</button></div>
 <pre id="code-merchant" role="tabpanel" aria-labelledby="tab-merchant"><span class="k">import</span> express <span class="k">from</span> <span class="s">"express"</span>;
-<span class="k">import</span> { tenderPaywall } <span class="k">from</span> <span class="s">"@tender/sdk"</span>;
+<span class="k">import</span> { tenderPaywall } <span class="k">from</span> <span class="s">"@paywithtender/sdk"</span>;
 
 <span class="k">const</span> app = express();
 
@@ -369,7 +369,7 @@ app.use(tenderPaywall({
 }));
 
 app.get(<span class="s">"/premium"</span>, (req, res) =&gt; res.json({ data: <span class="s">"…"</span> }));</pre>
-<pre id="code-agent" role="tabpanel" aria-labelledby="tab-agent" hidden><span class="k">import</span> { wrapFetchWithTender } <span class="k">from</span> <span class="s">"@tender/sdk"</span>;
+<pre id="code-agent" role="tabpanel" aria-labelledby="tab-agent" hidden><span class="k">import</span> { wrapFetchWithTender } <span class="k">from</span> <span class="s">"@paywithtender/sdk"</span>;
 
 <span class="k">const</span> pay = wrapFetchWithTender(fetch, {
   account,                    <span class="c">// the agent's wallet</span>
