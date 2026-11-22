@@ -87,6 +87,22 @@
   .lede { margin-top: 28px; max-width: 34em; font-size: 19px; line-height: 1.55; color: color-mix(in srgb, var(--paper) 78%, var(--engrave)); }
   .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 40px; }
 
+  .ca {
+    display: inline-flex; align-items: center; gap: 4px; margin-top: 22px; padding: 5px 5px 5px 14px;
+    border-radius: 999px; box-shadow: 0 0 0 1px var(--rule) inset; background: color-mix(in srgb, var(--plate) 70%, transparent);
+    font-size: 14px; max-width: 100%;
+  }
+  .ca[hidden] { display: none; }
+  .ca b { font: 400 16px/1 var(--serif); background: var(--foil); -webkit-background-clip: text; background-clip: text; color: transparent; margin-right: 6px; }
+  .ca code { font: 400 13px/1 var(--mono); color: var(--engrave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .ca button, .ca a {
+    font: 500 13px/1 var(--sans); color: var(--paper); background: var(--plate); border: 0; cursor: pointer; text-decoration: none;
+    height: 30px; padding: 0 12px; border-radius: 999px; display: inline-flex; align-items: center; box-shadow: 0 0 0 1px var(--rule) inset;
+  }
+  .ca button:hover, .ca a:hover { box-shadow: 0 0 0 1px var(--engrave) inset; }
+  .ca code { margin-right: 6px; }
+  footer .token-line[hidden] { display: none; }
+  footer .token-line code { font: 400 13px/1 var(--mono); color: var(--paper); }
   .stage { position: relative; aspect-ratio: 1; width: 100%; max-width: 560px; justify-self: end; }
   .rosette { position: absolute; inset: -14%; width: 128%; height: 128%; }
   .stage::before { /* soft foil glow behind the engraving */
@@ -291,6 +307,12 @@
         <a class="btn btn-foil" href="#build">Accept payments</a>
         <a class="btn btn-ghost" href="#how">See how it works</a>
       </div>
+      <div class="ca" id="ca" hidden>
+        <b>$TENDER</b>
+        <code id="ca-addr" title="Token contract address"></code>
+        <button type="button" id="ca-copy">Copy</button>
+        <a id="ca-buy" href="#">Buy</a>
+      </div>
     </div>
 
     <div class="stage" aria-label="Example Tender payment receipt">
@@ -470,6 +492,7 @@ app.get(<span class="s">"/premium"</span>, (req, res) =&gt; res.json({ data: <sp
       <li><a href="#" id="f-gh">GitHub</a></li>
       <li><a href="#" id="f-x">X</a></li>
     </ul>
+    <small class="token-line" id="ca-foot" hidden>$TENDER contract: <code id="ca-foot-addr"></code></small>
     <small>Built on Robinhood Chain with x402 and Uniswap. Tender is an independent project and is not affiliated with Robinhood Markets, Inc. Payments are final on-chain transactions.</small>
   </div>
 </footer>
@@ -482,6 +505,8 @@ const CONFIG = {
   live: true,
   contract: "0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4",
   explorer: "https://robinhoodchain.blockscout.com/tx/",
+  token: "",                  // $TENDER contract address: paste after launch, leave empty to hide
+  tokenBuyUrl: "",            // where the Buy button goes (e.g. the Pons page for $TENDER)
   links: { docs: "https://github.com/paywithtender", github: "https://github.com/paywithtender", x: "https://x.com/tenderpays" },
 };
 
@@ -543,6 +568,25 @@ if (CONFIG.live) {
   const s = document.getElementById("status");
   s.classList.add("live");
   s.querySelector("span").textContent = "Live on Robinhood Chain";
+}
+
+/* ------------------------------------------------------------------ $TENDER contract address */
+if (CONFIG.token) {
+  const short = CONFIG.token.slice(0, 6) + "…" + CONFIG.token.slice(-4);
+  document.getElementById("ca").hidden = false;
+  const addr = document.getElementById("ca-addr");
+  addr.textContent = short;
+  addr.title = CONFIG.token;
+  const buy = document.getElementById("ca-buy");
+  if (CONFIG.tokenBuyUrl) buy.href = CONFIG.tokenBuyUrl;
+  else buy.href = "https://robinhoodchain.blockscout.com/token/" + CONFIG.token, (buy.textContent = "View");
+  document.getElementById("ca-copy").onclick = async (e) => {
+    try { await navigator.clipboard.writeText(CONFIG.token); e.target.textContent = "Copied"; }
+    catch { e.target.textContent = "Select it below"; }
+    setTimeout(() => (e.target.textContent = "Copy"), 1600);
+  };
+  document.getElementById("ca-foot").hidden = false;
+  document.getElementById("ca-foot-addr").textContent = CONFIG.token;
 }
 
 /* ------------------------------------------------------------------ code tabs */
