@@ -40,6 +40,14 @@ Use a dedicated agent wallet holding only what you're happy for the agent to spe
 
 Leave out `TENDER_PRIVATE_KEY` to run read-only (`check_coin` and `quote` only).
 
+## Try it
+
+Tender runs its own paid API you can test against: `https://facilitator.paywithtender.com/api` lists the endpoints. Once the server is set up, ask your AI:
+
+> Pay https://facilitator.paywithtender.com/api/token?address=0xda4a075417d613ec018c8959fea6ab5ac5d5b78c with my bag
+
+It costs $0.01 plus gas, in whatever token you set as `TENDER_PAY_WITH`.
+
 ## Settings
 
 | Variable | Default | |

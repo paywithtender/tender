@@ -94,6 +94,7 @@
   }
   .ca[hidden] { display: none; }
   .ca b { font: 400 16px/1 var(--serif); background: var(--foil); -webkit-background-clip: text; background-clip: text; color: transparent; margin-right: 6px; }
+  .ca b .usd { font: 500 14px/1 var(--sans); margin-right: 1px; }
   .ca code { font: 400 13px/1 var(--mono); color: var(--engrave); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
   .ca button, .ca a {
     font: 500 13px/1 var(--sans); color: var(--paper); background: var(--plate); border: 0; cursor: pointer; text-decoration: none;
@@ -191,6 +192,18 @@
   .fee .price { font: 400 clamp(32px, 4vw, 48px)/1 var(--serif); letter-spacing: -0.02em; text-align: right; }
   .fee .price.foil { background: var(--foil); -webkit-background-clip: text; background-clip: text; color: transparent; }
 
+
+  /* live tools: rows, like the fee table */
+  .tools { border-top: 1px solid var(--rule); }
+  .tool { display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center; padding: 30px 0; border-bottom: 1px solid var(--rule); }
+  .tool h3 { font: 500 21px/1.3 var(--sans); letter-spacing: -0.01em; }
+  .tool p { color: var(--engrave); font-size: 16px; margin-top: 4px; max-width: 58ch; }
+  .cmd { display: inline-flex; align-items: center; gap: 14px; height: 46px; padding: 0 8px 0 18px; border-radius: 999px; border: 0; cursor: pointer;
+    background: #060C18; box-shadow: 0 0 0 1px var(--rule) inset; color: var(--paper); }
+  .cmd code { font: 400 14px/1 var(--mono); }
+  .cmd span { font: 500 13px/1 var(--sans); color: var(--engrave); background: var(--plate); height: 32px; padding: 0 12px; border-radius: 999px; display: inline-flex; align-items: center; }
+  .cmd:hover span { color: var(--paper); }
+
   /* feed */
   .ledger { background: var(--plate); border-radius: 22px; box-shadow: 0 0 0 1px var(--rule) inset; overflow: hidden; }
   .totals { display: grid; grid-template-columns: repeat(3, 1fr); border-bottom: 1px solid var(--rule); }
@@ -261,6 +274,9 @@
     th, td { padding-inline: 18px; }
     .fee { grid-template-columns: 1fr; gap: 10px; }
     .fee .price { text-align: left; }
+    .tool { grid-template-columns: 1fr; gap: 16px; }
+    .tool .btn, .cmd { justify-self: start; }
+    .cmd code { font-size: 12.5px; }
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
@@ -290,6 +306,7 @@
     <ul>
       <li><a href="#how">How it works</a></li>
       <li><a href="#build">Developers</a></li>
+      <li><a href="#tools">Try it</a></li>
       <li><a href="#fees">Fees</a></li>
       <li><a href="#ledger">Live payments</a></li>
       <li><a href="/check">Check a coin</a></li>
@@ -309,7 +326,7 @@
         <a class="btn btn-ghost" href="#how">See how it works</a>
       </div>
       <div class="ca" id="ca" hidden>
-        <b>$TENDER</b>
+        <b><span class="usd">$</span>TENDER</b>
         <code id="ca-addr" title="Token contract address"></code>
         <button type="button" id="ca-copy">Copy</button>
         <a id="ca-buy" href="#">Buy</a>
@@ -375,6 +392,7 @@
       <div class="tabs" role="tablist" aria-label="Code examples">
         <button role="tab" aria-selected="true" aria-controls="code-merchant" id="tab-merchant">Charge for an API</button>
         <button role="tab" aria-selected="false" aria-controls="code-agent" id="tab-agent">Pay from an agent</button>
+        <button role="tab" aria-selected="false" aria-controls="code-mcp" id="tab-mcp">Give your AI a wallet</button>
       </div>
       <div class="term">
         <div class="term-bar"><span id="term-file">server.ts</span><button class="copy" id="copy">Copy</button></div>
@@ -403,7 +421,55 @@ app.get(<span class="s">"/premium"</span>, (req, res) =&gt; res.json({ data: <sp
 });
 
 <span class="k">const</span> res = <span class="k">await</span> pay(<span class="s">"https://api.example.com/premium"</span>);</pre>
+<pre id="code-mcp" role="tabpanel" aria-labelledby="tab-mcp" hidden><span class="c">// Claude Desktop, Cursor or any MCP client</span>
+{
+  <span class="s">"mcpServers"</span>: {
+    <span class="s">"tender"</span>: {
+      <span class="s">"command"</span>: <span class="s">"npx"</span>,
+      <span class="s">"args"</span>: [<span class="s">"-y"</span>, <span class="s">"@paywithtender/mcp"</span>],
+      <span class="s">"env"</span>: {
+        <span class="s">"TENDER_PRIVATE_KEY"</span>: <span class="s">"0xAgentWalletKey"</span>,
+        <span class="s">"TENDER_PAY_WITH"</span>: <span class="s">"0xAnyToken"</span>,
+        <span class="s">"TENDER_DAILY_LIMIT_USD"</span>: <span class="s">"5"</span>
+      }
+    }
+  }
+}
+
+<span class="c">// then ask: "pay facilitator.paywithtender.com/api/gas with my bag"</span></pre>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="tools">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Live now. Try it.</h2>
+      <p>Everything here runs on Robinhood Chain mainnet today. Each one is a real way to see a coin turn into money.</p>
+    </div>
+    <div class="tools">
+      <article class="tool">
+        <div>
+          <h3>Coin checker</h3>
+          <p>Paste any Robinhood Chain contract address. See if agents can already pay with it, what $1 costs in it, and the fees.</p>
+        </div>
+        <a class="btn btn-ghost" href="/check">Check a coin</a>
+      </article>
+      <article class="tool">
+        <div>
+          <h3>MCP server</h3>
+          <p>Gives Claude, Cursor or any MCP client four tools: check_coin, quote, wallet and pay. Keys stay on your machine, and spending limits are built in.</p>
+        </div>
+        <button class="cmd" type="button" data-copy="npx -y @paywithtender/mcp"><code>npx -y @paywithtender/mcp</code><span>Copy</span></button>
+      </article>
+      <article class="tool">
+        <div>
+          <h3>Tender API</h3>
+          <p>Our own paid endpoints: Robinhood Chain gas and live token prices, $0.01 per call, payable in any coin. The first sale was paid in $TENDER by an AI agent.</p>
+        </div>
+        <a class="btn btn-ghost" href="https://facilitator.paywithtender.com/api">See endpoints</a>
+      </article>
     </div>
   </div>
 </section>
@@ -417,7 +483,7 @@ app.get(<span class="s">"/premium"</span>, (req, res) =&gt; res.json({ data: <sp
     <div class="fees">
       <div class="fee"><div><h3>Pay in USDG</h3><p>Settled straight to the merchant. The agent pays only the network gas, around a cent when the chain is quiet.</p></div><div class="price">Gas only</div></div>
       <div class="fee"><div><h3>Pay in any other token</h3><p>Swapped to USDG on Uniswap in the same transaction. Charged on top of your price, so you always get the full amount.</p></div><div class="price foil">0.5% + gas</div></div>
-      <div class="fee"><div><h3>Pay in $TENDER</h3><p>No conversion fee once the token is live, just the network gas.</p></div><div class="price">Gas only</div></div>
+      <div class="fee"><div><h3>Pay in $TENDER</h3><p>No Tender fee at all, just the network gas. Live on Uniswap since graduation.</p></div><div class="price">Gas only</div></div>
       <div class="fee"><div><h3>First approval for a new token</h3><p>Agents with no ETH get just enough gas covered for their one-time setup.</p></div><div class="price">Covered</div></div>
     </div>
   </div>
@@ -591,7 +657,7 @@ if (CONFIG.token) {
 }
 
 /* ------------------------------------------------------------------ code tabs */
-const tabs = { merchant: ["tab-merchant", "code-merchant", "server.ts"], agent: ["tab-agent", "code-agent", "agent.ts"] };
+const tabs = { merchant: ["tab-merchant", "code-merchant", "server.ts"], agent: ["tab-agent", "code-agent", "agent.ts"], mcp: ["tab-mcp", "code-mcp", "claude_desktop_config.json"] };
 function showTab(which) {
   for (const [k, [tab, panel]] of Object.entries(tabs)) {
     const on = k === which;
@@ -602,12 +668,21 @@ function showTab(which) {
 }
 document.getElementById("tab-merchant").onclick = () => showTab("merchant");
 document.getElementById("tab-agent").onclick = () => showTab("agent");
+document.getElementById("tab-mcp").onclick = () => showTab("mcp");
 document.getElementById("copy").onclick = async (e) => {
   const panel = document.querySelector("pre:not([hidden])");
   try { await navigator.clipboard.writeText(panel.innerText); e.target.textContent = "Copied"; }
   catch { e.target.textContent = "Select and copy"; }
   setTimeout(() => (e.target.textContent = "Copy"), 1600);
 };
+
+document.querySelectorAll(".cmd[data-copy]").forEach((b) => {
+  b.onclick = async () => {
+    const label = b.querySelector("span");
+    try { await navigator.clipboard.writeText(b.dataset.copy); label.textContent = "Copied"; } catch { label.textContent = "Select and copy"; }
+    setTimeout(() => (label.textContent = "Copy"), 1600);
+  };
+});
 
 /* ------------------------------------------------------------------ receipt + ledger */
 const EXAMPLES = [

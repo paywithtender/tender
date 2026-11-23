@@ -5,17 +5,32 @@
 - **Every payment covers its own gas.** The facilitator prices the gas it will spend to settle (gas units × gas price × ETH price, +20%) into each quote, and the agent signs for it. The contract caps the gas part at `maxGasFee` (1 USDG by default).
 - Paying in **USDG**: Permit2 transfer, no swap. Fee = gas only.
 - Paying in **any other token**: in one transaction the payer's token is pulled with a Permit2 signature, swapped on Uniswap to USDG, the merchant is paid exactly, Tender keeps **0.5% + gas**, and any unused token is refunded.
-- The **Tender coin** (after launch) can be marked fee-exempt: gas only.
+- **$TENDER** (`0xda4a075417d613ec018c8959fea6ab5ac5d5b78c`) is fee-exempt: gas only.
 - The standard x402 `exact` scheme (EIP-3009) is off by default because the facilitator would pay its gas with no way to charge for it. Turn it on with `EXACT_ENABLED=true` if you want plain x402 clients to work and are happy to subsidize them.
+
+## Live now
+
+| | |
+|---|---|
+| Website | https://paywithtender.com |
+| Coin checker | https://paywithtender.com/check — is a token spendable, and what does $1 cost in it |
+| Facilitator | https://facilitator.paywithtender.com (`/supported`, `/quote`, `/verify`, `/settle`, `/feed`) |
+| Tender API | https://facilitator.paywithtender.com/api — paid endpoints (`/api/gas`, `/api/token?address=`), $0.01 per call, any coin |
+| SDK | [`@paywithtender/sdk`](https://www.npmjs.com/package/@paywithtender/sdk) — `tenderPaywall` for APIs, `wrapFetchWithTender` for agents |
+| MCP server | [`@paywithtender/mcp`](https://www.npmjs.com/package/@paywithtender/mcp) — `npx -y @paywithtender/mcp`; tools `check_coin`, `quote`, `wallet`, `pay` ([setup](packages/mcp/README.md)) |
+| Contract | [`0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4`](https://robinhoodchain.blockscout.com/address/0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4) on Robinhood Chain (verified) |
 
 ## Layout
 
 | Path | What |
 |---|---|
 | `contracts/` | `TenderSettlement.sol`, its tests, and the deploy and admin scripts |
-| `packages/facilitator/` | The facilitator server: `/supported`, `/quote`, `/verify`, `/settle`, `/sponsor`, `/feed` |
+| `packages/facilitator/` | The facilitator server: `/supported`, `/quote`, `/verify`, `/settle`, `/sponsor`, `/feed`, plus the paid `/api` |
 | `packages/sdk/` | `wrapFetchWithTender` (agents), `tenderPaywall` (merchants, Express), `ensurePermit2Approval` |
+| `packages/mcp/` | `@paywithtender/mcp`, the MCP server |
+| `site/` | paywithtender.com and the coin checker (`site/check/`) |
 | `e2e/run.ts` | Full local run: chain, facilitator, paywalled API, agents paying in USDG and in a memecoin |
+| `e2e/mcp.mts`, `e2e/api.mts` | The MCP server and the paid API, driven end to end on a local chain |
 
 ## Run the tests
 
@@ -23,6 +38,8 @@
 npm install
 cd contracts && npx hardhat test && cd ..   # 13 contract tests
 npm run test:e2e                            # end-to-end checks on a local chain (incl. "fee covers real gas")
+npm run test:mcp                            # MCP server tools against the local stack
+npm run test:api                            # the paid /api endpoints, paid through the MCP server
 ```
 
 ## How a memecoin payment works
