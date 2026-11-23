@@ -124,6 +124,8 @@ export interface TenderSwapClientOptions {
   maxFeePerCall?: bigint;
   /** Approve Permit2 for the token automatically on first use (gas sponsored if the wallet has no ETH). Default true. */
   autoApprove?: boolean;
+  /** USDG address per network, for networks other than Robinhood Chain (e.g. a local test chain). */
+  usdg?: Record<string, string>;
 }
 
 /**
@@ -141,11 +143,13 @@ export class TenderSwapClient {
   private readonly resources = new WeakMap<object, ResourceInfo>();
   private lastResource: ResourceInfo | undefined;
   private readonly approved = new Set<string>();
+  private readonly usdg: Record<string, string>;
 
   constructor(opts: TenderSwapClientOptions) {
     if (!opts?.account) throw new Error("tender-swap: account is required");
     if (opts.payWith && !isAddress(opts.payWith)) throw new Error("tender-swap: payWith must be a token address");
     this.opts = opts;
+    this.usdg = { [ROBINHOOD_NETWORK]: ROBINHOOD.usdg, ...(opts.usdg ?? {}) };
     this.rpcUrl = opts.rpcUrl ?? "https://rpc.mainnet.chain.robinhood.com";
     this.chain =
       opts.chain ??
@@ -166,6 +170,13 @@ export class TenderSwapClient {
       },
     };
   }
+
+  /**
+   * Lets x402 spend controls recognize the price asset: tender-swap prices are always in USDG,
+   * so the client's usual USD caps apply to them like they do for the standard exact scheme.
+   */
+  findDefaultAsset = (asset: string, network: string) =>
+    asset.toLowerCase() === this.usdg[network]?.toLowerCase() ? { asset, decimals: 6, symbol: "USDG" } : undefined;
 
   async createPaymentPayload(x402Version: number, req: Requirements, context?: { maxAmountPerPayment?: string }) {
     const resource = this.resources.get(req as object) ?? this.lastResource;

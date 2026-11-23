@@ -59,7 +59,7 @@ The first payment with a new token sends a one-time Permit2 approval. If the wal
 
 `TenderSwapServer({ facilitator?, usdg? })`: `facilitator` is where agents get quotes (default `https://facilitator.paywithtender.com`). `usdg` maps other networks, such as a local test chain, to their USDG address.
 
-`TenderSwapClient({ account, payWith?, rpcUrl?, chain?, maxFeePerCall?, autoApprove? })`: `payWith` is the token to spend (default USDG). `maxFeePerCall` refuses a payment if Tender's fee plus gas is above it (default $0.10, in USDG units). Coinbase's client spend controls (`maxAmountPerPayment`) still apply to the USDG price.
+`TenderSwapClient({ account, payWith?, rpcUrl?, chain?, maxFeePerCall?, autoApprove?, usdg? })`: `payWith` is the token to spend (default USDG). `maxFeePerCall` refuses a payment if Tender's fee plus gas is above it (default $0.10, in USDG units). Coinbase's client spend controls (`maxAmountPerPayment`) still apply to the USDG price.
 
 ## Links
 

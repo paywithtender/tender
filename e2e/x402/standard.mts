@@ -234,8 +234,8 @@ async function main() {
     const degen = privateKeyToAccount(generatePrivateKey()); // holds only a memecoin, zero ETH
     await call(meme, "MockERC20", "mint", [degen.address, parseEther("1000")]);
     const pay2 = wrapFetchWithPaymentFromConfig(fetch, {
-      schemes: [{ network: "eip155:31337", client: new TenderSwapClient({ account: degen, payWith: meme, rpcUrl: RPC, chain: pc.chain! }) as any }],
-      spendControls: { allowedAssets: [{ network: "eip155:31337", asset: usdg, maxAmountPerPayment: "100000" }] },
+      // no spendControls override: the client's default USD caps must recognize tender-swap's USDG price on their own
+      schemes: [{ network: "eip155:31337", client: new TenderSwapClient({ account: degen, payWith: meme, rpcUrl: RPC, chain: pc.chain!, usdg: { "eip155:31337": usdg } }) as any }],
     } as any);
     const memeBefore = await bal(meme, degen.address);
     const r5 = await pay2("http://127.0.0.1:4033/premium");
