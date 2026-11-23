@@ -26,6 +26,7 @@ import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme as ExactEvmServer } from "@x402/evm/exact/server";
 import { ExactEvmScheme as ExactEvmClient } from "@x402/evm/exact/client";
 import { wrapFetchWithPaymentFromConfig } from "@x402/fetch";
+import { TenderSwapClient, TenderSwapServer } from "../../packages/x402/src/index.ts";
 import { ensurePermit2Approval, wrapFetchWithTender } from "../../packages/sdk/src/client.ts";
 import { HEADER_RESPONSE, decodeHeader, type SettleResponse } from "../../packages/sdk/src/protocol.ts";
 import { erc20Abi } from "../../packages/sdk/src/abi.ts";
@@ -201,6 +202,51 @@ async function main() {
     const r3 = await pay("http://127.0.0.1:4031/weather");
     check("3rd payment refused by the per-payer daily limit", r3.status !== 200, String(r3.status));
     check("merchant got exactly 2 payments, nothing extra moved", (await bal(usdg, merchant2)) === 40_000n);
+
+    console.log("\n5. @paywithtender/x402: the same stock SDKs, now accepting ANY token");
+    const shop2 = express();
+    const rs2 = new x402ResourceServer(new HTTPFacilitatorClient({ url: FAC }))
+      .register("eip155:31337", new ExactEvmServer())
+      .register("eip155:31337", new TenderSwapServer({ facilitator: FAC, usdg: { "eip155:31337": usdg } }) as any);
+    const merchant3 = privateKeyToAccount(generatePrivateKey()).address;
+    shop2.use(
+      paymentMiddleware(
+        {
+          "GET /premium": {
+            accepts: [
+              { scheme: "exact", network: "eip155:31337", payTo: merchant3, price: { amount: "50000", asset: usdg, extra: { name: "Global Dollar", version: "1" } } },
+              { scheme: "tender-swap", network: "eip155:31337", payTo: merchant3, price: "$0.05" },
+            ],
+            description: "Premium data",
+          },
+        },
+        rs2
+      )
+    );
+    shop2.get("/premium", (_req, res) => res.json({ alpha: "buy low, sell high" }));
+    servers.push(shop2.listen(4033));
+    await new Promise((r) => setTimeout(r, 300));
+    const offer = JSON.parse(Buffer.from((await fetch("http://127.0.0.1:4033/premium")).headers.get("payment-required") ?? "", "base64").toString() || "{}");
+    const swapOpt = offer.accepts?.find((a: any) => a.scheme === "tender-swap");
+    check("402 offers exact AND tender-swap", offer.accepts?.length === 2 && !!swapOpt);
+    check("tender-swap option carries facilitator, settlement, permit2", swapOpt?.extra?.facilitator === FAC && !!swapOpt?.extra?.settlement && !!swapOpt?.extra?.permit2 && swapOpt?.amount === "50000");
+
+    const degen = privateKeyToAccount(generatePrivateKey()); // holds only a memecoin, zero ETH
+    await call(meme, "MockERC20", "mint", [degen.address, parseEther("1000")]);
+    const pay2 = wrapFetchWithPaymentFromConfig(fetch, {
+      schemes: [{ network: "eip155:31337", client: new TenderSwapClient({ account: degen, payWith: meme, rpcUrl: RPC, chain: pc.chain! }) as any }],
+      spendControls: { allowedAssets: [{ network: "eip155:31337", asset: usdg, maxAmountPerPayment: "100000" }] },
+    } as any);
+    const memeBefore = await bal(meme, degen.address);
+    const r5 = await pay2("http://127.0.0.1:4033/premium");
+    const body5 = (await r5.json()) as any;
+    check("stock @x402/fetch paid in a memecoin and got the data", r5.status === 200 && body5.alpha === "buy low, sell high", JSON.stringify(body5));
+    check("merchant got exactly $0.05 USDG", (await bal(usdg, merchant3)) === 50_000n);
+    check("agent spent memecoin, not USDG, and needed no ETH to start", (await bal(meme, degen.address)) < memeBefore && (await bal(usdg, degen.address)) === 0n);
+    const st5 = JSON.parse(Buffer.from(r5.headers.get("payment-response") ?? "", "base64").toString() || "{}");
+    check("settled on-chain through the Tender contract", st5.success === true && st5.transaction?.startsWith("0x"));
+    const feed5 = (await (await fetch(FAC + "/feed")).json()) as any;
+    check("swap payment in the live feed with Tender's fee", feed5.recent[0]?.symbol === "RHDOGE" && BigInt(feed5.recent[0]?.fee ?? 0) > 0n);
   } finally {
     servers.forEach((s) => s.close());
     node.kill();

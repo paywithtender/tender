@@ -17,6 +17,7 @@
 | Facilitator | https://facilitator.paywithtender.com (`/supported`, `/quote`, `/verify`, `/settle`, `/feed`) |
 | Tender API | https://facilitator.paywithtender.com/api — paid endpoints (`/api/gas`, `/api/token?address=`), $0.01 per call, any coin |
 | SDK | [`@paywithtender/sdk`](https://www.npmjs.com/package/@paywithtender/sdk) — `tenderPaywall` for APIs, `wrapFetchWithTender` for agents |
+| x402 plugin | [`@paywithtender/x402`](https://www.npmjs.com/package/@paywithtender/x402): `tender-swap` for Coinbase's x402 SDKs, so APIs accept and agents pay with any token ([setup](packages/x402/README.md)) |
 | MCP server | [`@paywithtender/mcp`](https://www.npmjs.com/package/@paywithtender/mcp) — `npx -y @paywithtender/mcp`; tools `check_coin`, `quote`, `wallet`, `pay` ([setup](packages/mcp/README.md)) |
 | Contract | [`0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4`](https://robinhoodchain.blockscout.com/address/0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4) on Robinhood Chain (verified) |
 
@@ -37,7 +38,17 @@ app.use(paymentMiddleware({
 }, server));
 ```
 
-Agents using `@x402/fetch` with `ExactEvmScheme` pay these endpoints with no changes. To also accept any token (swapped to USDG on Uniswap in the same transaction), use `tenderPaywall` from `@paywithtender/sdk`. It offers both `exact` and `tender-swap`. `npm run test:x402` runs Coinbase's packages against a local Tender stack.
+Agents using `@x402/fetch` with `ExactEvmScheme` pay these endpoints with no changes.
+
+**Accept any token:** register `TenderSwapServer` from [`@paywithtender/x402`](packages/x402/README.md) next to `ExactEvmScheme`, and add a `tender-swap` entry to `accepts`. Agents holding any token with a Uniswap route can then pay, and you still receive exact USDG. Agents register `TenderSwapClient` to pay with the token they hold.
+
+```ts
+import { TenderSwapServer } from "@paywithtender/x402";
+server.register("eip155:4663", new TenderSwapServer());
+// accepts: [{ scheme: "exact", ... }, { scheme: "tender-swap", price: "$0.01", network: "eip155:4663", payTo }]
+```
+
+`npm run test:x402` runs Coinbase's packages, plus `@paywithtender/x402`, against a local Tender stack.
 
 ## Layout
 
@@ -47,6 +58,7 @@ Agents using `@x402/fetch` with `ExactEvmScheme` pay these endpoints with no cha
 | `packages/facilitator/` | The facilitator server: `/supported`, `/quote`, `/verify`, `/settle`, `/sponsor`, `/feed`, plus the paid `/api` |
 | `packages/sdk/` | `wrapFetchWithTender` (agents), `tenderPaywall` (merchants, Express), `ensurePermit2Approval` |
 | `packages/mcp/` | `@paywithtender/mcp`, the MCP server |
+| `packages/x402/` | `@paywithtender/x402`, the tender-swap scheme for Coinbase's x402 SDKs |
 | `site/` | paywithtender.com and the coin checker (`site/check/`) |
 | `e2e/run.ts` | Full local run: chain, facilitator, paywalled API, agents paying in USDG and in a memecoin |
 | `e2e/mcp.mts`, `e2e/api.mts` | The MCP server and the paid API, driven end to end on a local chain |

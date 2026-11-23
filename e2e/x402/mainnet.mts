@@ -3,7 +3,9 @@
  *   a demo API built with Coinbase's @x402/express (stock "exact" scheme, facilitator = live Tender)
  *   + the test agent paying with Coinbase's @x402/fetch, in USDG  →  a real Robinhood Chain transaction.
  *
- * Run from the repo root:  node --import tsx e2e/x402/mainnet.mts
+ * With PAY_WITH=0x<token>, the API also offers tender-swap (@paywithtender/x402) and the agent pays in that token.
+ *
+ * Run from the repo root:  [PAY_WITH=0x…] node --import tsx e2e/x402/mainnet.mts
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -15,6 +17,7 @@ import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme as ExactEvmServer } from "@x402/evm/exact/server";
 import { ExactEvmScheme as ExactEvmClient } from "@x402/evm/exact/client";
 import { wrapFetchWithPaymentFromConfig } from "@x402/fetch";
+import { TenderSwapClient, TenderSwapServer } from "../../packages/x402/src/index.ts";
 
 const ROOT = path.resolve(import.meta.dirname, "../..");
 const FAC = "https://facilitator.paywithtender.com";
@@ -39,11 +42,22 @@ async function main() {
   }
 
   // a stock x402 API: nothing Tender-specific except the facilitator URL
-  const server = new x402ResourceServer(new HTTPFacilitatorClient({ url: FAC })).register(NETWORK, new ExactEvmServer());
+  const payWith = process.env.PAY_WITH?.trim() as Address | undefined;
+  const server = new x402ResourceServer(new HTTPFacilitatorClient({ url: FAC }))
+    .register(NETWORK, new ExactEvmServer())
+    .register(NETWORK, new TenderSwapServer() as any);
   const api = express();
   api.use(
     paymentMiddleware(
-      { "GET /gas": { accepts: [{ scheme: "exact", price: "$0.01", network: NETWORK, payTo: merchant }], description: "Robinhood Chain gas report" } },
+      {
+        "GET /gas": {
+          accepts: [
+            { scheme: "exact", price: "$0.01", network: NETWORK, payTo: merchant },
+            { scheme: "tender-swap", price: "$0.01", network: NETWORK, payTo: merchant },
+          ],
+          description: "Robinhood Chain gas report",
+        },
+      },
       server
     )
   );
@@ -56,16 +70,18 @@ async function main() {
   try {
     const before = await bal(merchant);
     console.log(`Agent holds ${formatUnits(await bal(agent.address), 6)} USDG`);
-    const pay = wrapFetchWithPaymentFromConfig(fetch, { schemes: [{ network: NETWORK, client: new ExactEvmClient(agent as any) }] });
+    const client = payWith ? (new TenderSwapClient({ account: agent, payWith }) as any) : new ExactEvmClient(agent as any);
+    console.log(payWith ? `Paying with token ${payWith} via @paywithtender/x402 (tender-swap)` : "Paying in USDG via the stock exact scheme");
+    const pay = wrapFetchWithPaymentFromConfig(fetch, { schemes: [{ network: NETWORK, client }] });
     const res = await pay("http://127.0.0.1:4032/gas");
     const body = await res.json();
     if (res.status !== 200) throw new Error(`payment refused (${res.status}): ${JSON.stringify(body)}`);
     const settle = JSON.parse(Buffer.from(res.headers.get("payment-response") ?? "", "base64").toString() || "{}");
     const got = (await bal(merchant)) - before;
     console.log(`\nPAID with the standard x402 client. The API answered: ${JSON.stringify(body)}`);
-    console.log(`Merchant received ${formatUnits(got, 6)} USDG (no Tender fee)`);
+    console.log(`Merchant received ${formatUnits(got, 6)} USDG${payWith ? "" : " (no Tender fee)"}`);
     console.log(`Transaction: https://robinhoodchain.blockscout.com/tx/${settle.transaction}`);
-    console.log("\nPASSED: a standard x402 API and client paid through Tender on mainnet.");
+    console.log(`\nPASSED: a standard x402 API and client paid through Tender on mainnet${payWith ? ", in a non-USDG token" : ""}.`);
   } finally {
     srv.close();
   }

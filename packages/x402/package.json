@@ -1,0 +1,23 @@
+{
+  "name": "@paywithtender/x402",
+  "version": "0.1.0",
+  "description": "Tender's tender-swap scheme for Coinbase's x402 SDKs: accept or pay with any token on Robinhood Chain, settled in exact USDG.",
+  "license": "MIT",
+  "homepage": "https://paywithtender.com",
+  "repository": { "type": "git", "url": "git+https://github.com/paywithtender/tender.git", "directory": "packages/x402" },
+  "keywords": ["x402", "robinhood-chain", "payments", "usdg", "ai-agents", "tender", "uniswap"],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" } },
+  "files": ["dist", "README.md"],
+  "engines": { "node": ">=20" },
+  "scripts": { "build": "tsc -p tsconfig.json" },
+  "dependencies": {
+    "@paywithtender/sdk": "^0.1.2",
+    "viem": "^2.21.0"
+  },
+  "peerDependencies": { "@x402/core": ">=2.0.0" },
+  "peerDependenciesMeta": { "@x402/core": { "optional": true } },
+  "devDependencies": { "typescript": "^5.6.0", "@types/node": "^22.0.0" }
+}
