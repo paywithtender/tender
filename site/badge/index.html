@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spendable on Tender badge</title>
+<meta name="description" content="A live badge that shows your Robinhood Chain coin is spendable by AI agents on Tender. Paste your contract address and copy the embed code.">
+<meta property="og:title" content="Spendable on Tender badge">
+<meta property="og:description" content="Show your coin is money: a live badge for any Robinhood Chain token.">
+<meta property="og:url" content="https://paywithtender.com/badge">
+<link rel="canonical" href="https://paywithtender.com/badge">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0A1222; --plate: #121D33; --rule: #22304D; --engrave: #8E9CB8; --paper: #EEF1F7;
+    --signal: #7CF0C5; --warn: #FFD3A3;
+    --foil-a: #9AE6D8; --foil-b: #B6A6FF; --foil-c: #FFD3A3;
+    --foil: linear-gradient(110deg, var(--foil-a), var(--foil-b) 45%, var(--foil-c) 80%, var(--foil-a));
+    --serif: "Gloock", "Times New Roman", serif;
+    --sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+    --wrap: 1180px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--ink); color: var(--paper); font: 400 17px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; min-height: 100vh; display: flex; flex-direction: column; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--foil-a); outline-offset: 3px; border-radius: 4px; }
+  .wrap { width: min(100% - 48px, var(--wrap)); margin-inline: auto; }
+
+  nav.top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--ink) 78%, transparent); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); border-bottom: 1px solid color-mix(in srgb, var(--rule) 60%, transparent); }
+  nav.top .wrap { display: flex; align-items: center; gap: 32px; height: 68px; }
+  .mark { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 400 24px/1 var(--serif); letter-spacing: -0.01em; }
+  .mark svg { width: 26px; height: 26px; }
+  nav.top ul { display: flex; gap: 28px; list-style: none; margin-left: auto; font-size: 15px; color: var(--engrave); }
+  nav.top ul a { text-decoration: none; transition: color .2s; }
+  nav.top ul a:hover, nav.top ul a[aria-current] { color: var(--paper); }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 46px; padding: 0 22px; border-radius: 999px; font: 500 15px/1 var(--sans); text-decoration: none; cursor: pointer; border: 0; transition: transform .15s, box-shadow .2s, background .2s; white-space: nowrap; }
+  .btn-foil { background: var(--foil); background-size: 200% 100%; color: var(--ink); box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset; }
+  .btn-foil:hover { background-position: 100% 0; box-shadow: 0 8px 32px -8px color-mix(in srgb, var(--foil-b) 70%, transparent); }
+  .btn-ghost { background: transparent; color: var(--paper); box-shadow: 0 0 0 1px var(--rule) inset; }
+  .btn-ghost:hover { box-shadow: 0 0 0 1px var(--engrave) inset; }
+  .btn:active { transform: translateY(1px); }
+  .btn[disabled] { opacity: .6; cursor: progress; }
+  nav.top .btn { height: 38px; padding: 0 16px; font-size: 14px; }
+
+  main { flex: 1; position: relative; overflow: hidden; }
+  .bg { position: absolute; right: -260px; top: -200px; width: 900px; height: 900px; opacity: .55; pointer-events: none; }
+  .bg::before { content: ""; position: absolute; inset: 14%; border-radius: 50%; background: radial-gradient(closest-side, color-mix(in srgb, var(--foil-b) 20%, transparent), color-mix(in srgb, var(--foil-a) 6%, transparent) 60%, transparent); filter: blur(24px); }
+  .bg svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .bg g { transform-origin: 300px 300px; animation: spin 180s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .checker { position: relative; z-index: 2; padding: 72px 0 96px; display: grid; grid-template-columns: 1fr 420px; grid-template-areas: "intro result" "rules result"; gap: 0 64px; align-items: start; }
+  .checker > section:first-child { grid-area: intro; }
+  .checker > aside { grid-area: result; }
+  .rules-wrap { grid-area: rules; }
+  h1 { font: 400 clamp(48px, 6.4vw, 88px)/0.96 var(--serif); letter-spacing: -0.025em; max-width: 10ch; text-wrap: balance; }
+  .lede { margin-top: 24px; max-width: 32em; font-size: 19px; line-height: 1.55; color: color-mix(in srgb, var(--paper) 78%, var(--engrave)); }
+
+  form { margin-top: 40px; display: flex; gap: 10px; max-width: 620px; }
+  .field { flex: 1; min-width: 0; position: relative; }
+  .field label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  input { width: 100%; height: 56px; padding: 0 20px; border-radius: 999px; border: 0; background: color-mix(in srgb, var(--plate) 85%, transparent); box-shadow: 0 0 0 1px var(--rule) inset; color: var(--paper); font: 400 15px/1 var(--mono); }
+  input::placeholder { color: color-mix(in srgb, var(--engrave) 70%, transparent); font-family: var(--sans); }
+  input:focus { outline: none; box-shadow: 0 0 0 1px var(--foil-a) inset, 0 0 0 4px color-mix(in srgb, var(--foil-a) 18%, transparent); }
+  form .btn { height: 56px; padding: 0 28px; }
+  .hint { margin-top: 14px; font-size: 14px; color: var(--engrave); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .hint button { font: 500 13px/1 var(--sans); color: var(--paper); background: var(--plate); border: 0; cursor: pointer; height: 30px; padding: 0 12px; border-radius: 999px; box-shadow: 0 0 0 1px var(--rule) inset; }
+  .hint button:hover { box-shadow: 0 0 0 1px var(--engrave) inset; }
+  .err { margin-top: 14px; font-size: 14px; color: var(--warn); min-height: 1.4em; }
+
+  .rules { margin-top: 56px; max-width: 560px; border-top: 1px solid var(--rule); }
+  .rules div { display: grid; grid-template-columns: 150px 1fr; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--rule); font-size: 15px; }
+  .rules dt { color: var(--paper); }
+  .rules dd { color: var(--engrave); }
+
+  /* the result: a receipt, like the main site */
+  .receipt { position: relative; background: color-mix(in srgb, var(--plate) 90%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 20px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--paper) 10%, transparent) inset, 0 40px 80px -30px rgba(0,0,0,.7); padding: 28px 28px 24px; overflow: hidden; }
+  .receipt::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: var(--foil); }
+  .receipt.idle { color: var(--engrave); }
+  .r-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+  .r-head b { font: 400 22px/1.1 var(--serif); overflow-wrap: anywhere; }
+  .r-head span { font: 400 12px/1 var(--mono); color: var(--engrave); white-space: nowrap; }
+  .verdict { display: flex; align-items: center; gap: 10px; margin: 18px 0 8px; font: 400 40px/1 var(--serif); letter-spacing: -0.01em; }
+  .verdict i { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+  .verdict.yes i { background: var(--signal); box-shadow: 0 0 0 5px color-mix(in srgb, var(--signal) 18%, transparent); }
+  .verdict.no i { background: var(--warn); box-shadow: 0 0 0 5px color-mix(in srgb, var(--warn) 18%, transparent); }
+  .note { font-size: 15px; color: color-mix(in srgb, var(--paper) 78%, var(--engrave)); margin-bottom: 14px; }
+  dl.rows { margin-top: 8px; }
+  .r-row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; font-size: 14px; border-top: 1px dashed color-mix(in srgb, var(--rule) 90%, transparent); }
+  .r-row dt { color: var(--engrave); }
+  .r-row dd { font: 500 14px/1.4 var(--mono); text-align: right; overflow-wrap: anywhere; }
+  .r-row.total dd { font-size: 17px; background: var(--foil); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+  .actions .btn { height: 40px; padding: 0 16px; font-size: 14px; }
+  .skeleton { height: 14px; border-radius: 6px; margin: 14px 0; background: linear-gradient(90deg, var(--rule), color-mix(in srgb, var(--rule) 40%, var(--plate)), var(--rule)); background-size: 200% 100%; animation: shimmer 1.2s linear infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  footer { border-top: 1px solid var(--rule); padding: 32px 0 44px; color: var(--engrave); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: center; }
+  footer ul { display: flex; gap: 24px; list-style: none; }
+  footer ul a { text-decoration: none; }
+  footer ul a:hover { color: var(--paper); }
+  footer small { flex-basis: 100%; font-size: 13px; color: color-mix(in srgb, var(--engrave) 75%, transparent); }
+
+  @media (max-width: 960px) {
+    .checker { grid-template-columns: 1fr; grid-template-areas: "intro" "result" "rules"; gap: 8px; padding-top: 48px; }
+    nav.top ul { display: none; }
+    nav.top .btn { margin-left: auto; }
+  }
+  @media (max-width: 560px) {
+    form { flex-direction: column; }
+    .rules div { grid-template-columns: 1fr; gap: 2px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .bg g, .skeleton { animation: none; } }
+
+  .preview { margin-top: 28px; min-height: 120px; border-radius: 20px; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; box-shadow: 0 0 0 1px var(--rule) inset; }
+  .preview > div { display: grid; place-items: center; padding: 34px 20px; }
+  .preview .light { background: #F4F6FA; }
+  .preview img { max-width: 100%; height: 36px; }
+  .preview .empty { grid-column: 1 / -1; color: var(--engrave); font-size: 15px; }
+  .snips { margin-top: 28px; display: grid; gap: 14px; }
+  .snip { border-radius: 16px; background: #060C18; box-shadow: 0 0 0 1px var(--rule) inset; overflow: hidden; }
+  .snip header { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px 10px 18px; border-bottom: 1px solid var(--rule); font-size: 14px; color: var(--engrave); }
+  .snip header button { font: 500 13px/1 var(--sans); color: var(--paper); background: var(--plate); border: 0; cursor: pointer; height: 30px; padding: 0 12px; border-radius: 999px; box-shadow: 0 0 0 1px var(--rule) inset; }
+  .snip pre { padding: 14px 18px; font: 400 13px/1.6 var(--mono); color: #C9D2E3; white-space: pre-wrap; word-break: break-all; }
+  .side h2 { font: 400 30px/1.1 var(--serif); letter-spacing: -0.01em; }
+  .side ol { margin-top: 18px; padding-left: 1.2em; color: color-mix(in srgb, var(--paper) 78%, var(--engrave)); }
+  .side li { padding: 8px 0; }
+  .side .actions { margin-top: 24px; }
+  .hidden { display: none; }
+  @media (max-width: 560px) { .preview { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="foil" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9AE6D8"/><stop offset=".45" stop-color="#B6A6FF"/><stop offset=".8" stop-color="#FFD3A3"/><stop offset="1" stop-color="#9AE6D8"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<nav class="top" aria-label="Main">
+  <div class="wrap">
+    <a class="mark" href="/" aria-label="Tender home"><svg viewBox="0 0 26 26" aria-hidden="true" class="mark-svg"></svg>Tender</a>
+    <ul>
+      <li><a href="/#how">How it works</a></li>
+      <li><a href="/#build">Developers</a></li>
+      <li><a href="/#fees">Fees</a></li>
+      <li><a href="/check">Check a coin</a></li>
+      <li><a href="/badge" aria-current="page">Badge</a></li>
+    </ul>
+    <a class="btn btn-foil" href="/#build">Accept payments</a>
+  </div>
+</nav>
+
+<main>
+  <div class="bg" aria-hidden="true"><svg viewBox="0 0 600 600"><g id="bg-ros"></g></svg></div>
+  <div class="wrap checker">
+    <section>
+      <h1>Show your coin is money.</h1>
+      <p class="lede">A live badge for any Robinhood Chain coin. It says your coin is spendable on Tender, links to its live result, and flips on its own when a Pons coin graduates.</p>
+
+      <form id="form" autocomplete="off">
+        <div class="field">
+          <label for="ca">Token contract address</label>
+          <input id="ca" name="ca" placeholder="Paste your coin's contract address (0x…)" spellcheck="false">
+        </div>
+        <button class="btn btn-foil" id="go" type="submit">Make badge</button>
+      </form>
+      <p class="err" id="err" role="alert"></p>
+
+      <div class="preview" id="preview" aria-live="polite"><div class="empty">Your badge shows up here.</div></div>
+
+      <div class="snips hidden" id="snips">
+        <div class="snip"><header>Website (HTML)<button type="button" data-copy="html">Copy</button></header><pre id="s-html"></pre></div>
+        <div class="snip"><header>README or docs (Markdown)<button type="button" data-copy="md">Copy</button></header><pre id="s-md"></pre></div>
+        <div class="snip"><header>Link for X or Telegram<button type="button" data-copy="link">Copy</button></header><pre id="s-link"></pre></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <h2>How it works</h2>
+      <ol>
+        <li>The badge checks your coin live: if it has a Uniswap route to USDG, it reads "Spendable on Tender".</li>
+        <li>Pons coins still on the curve read "Spendable at graduation", then flip by themselves after they graduate.</li>
+        <li>Anyone who clicks it lands on your coin's live checker result.</li>
+      </ol>
+      <div class="actions">
+        <button class="btn btn-ghost hidden" id="png" type="button">Download PNG for X</button>
+        <a class="btn btn-ghost hidden" id="share" target="_blank" rel="noopener">Share on X</a>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a class="mark" href="/" aria-label="Tender home"><svg viewBox="0 0 26 26" aria-hidden="true" class="mark-svg"></svg>Tender</a>
+    <ul>
+      <li><a href="https://github.com/paywithtender/tender#readme">Docs</a></li>
+      <li><a href="https://github.com/paywithtender/tender">GitHub</a></li>
+      <li><a href="https://x.com/tenderpays">X</a></li>
+    </ul>
+    <small>Quotes come live from Uniswap through the Tender facilitator and change with the market. Tender is an independent project and is not affiliated with Robinhood Markets, Inc.</small>
+  </div>
+</footer>
+
+<script>
+const CFG = { badge: "https://facilitator.paywithtender.com/badge/", check: "https://paywithtender.com/check?ca=", site: "https://paywithtender.com/badge" };
+/* ---------------------------------------------------------------- engraving */
+function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+function hypo(R, r, d, s, steps = 1400, cx = 300, cy = 300) {
+  const turns = r / gcd(R, r); let p = "";
+  for (let i = 0; i <= steps; i++) {
+    const t = (i / steps) * Math.PI * 2 * turns;
+    const x = cx + s * ((R - r) * Math.cos(t) + d * Math.cos(((R - r) / r) * t));
+    const y = cy + s * ((R - r) * Math.sin(t) - d * Math.sin(((R - r) / r) * t));
+    p += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+  }
+  return p;
+}
+document.querySelectorAll(".mark-svg").forEach((svg) => {
+  svg.innerHTML = [0, 6, 12].map((a) => `<path d="${hypo(10, 3, 4.2, 1.05, 500, 13, 13)}" transform="rotate(${a} 13 13)" fill="none" stroke="url(#foil)" stroke-width=".7"/>`).join("");
+});
+(function () {
+  let out = "";
+  for (const [R, r, d, s, copies, step, w, o] of [[120, 45, 66, 1.6, 8, 2, .4, .45], [84, 21, 16, 1.25, 5, 3.5, .45, .5]]) {
+    const path = hypo(R, r, d, s);
+    for (let k = 0; k < copies; k++) out += `<path d="${path}" transform="rotate(${k * step} 300 300)" fill="none" stroke="url(#foil)" stroke-width="${w}" opacity="${o}"/>`;
+  }
+  document.getElementById("bg-ros").innerHTML = out;
+})();
+
+
+const $ = (id) => document.getElementById(id);
+const snippets = {};
+let current = null;
+
+function make(raw) {
+  const addr = raw.trim();
+  $("err").textContent = "";
+  if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) { $("err").textContent = "That isn't a contract address. It should start with 0x and be 42 characters long."; return; }
+  current = addr;
+  const img = CFG.badge + addr + ".svg";
+  const link = CFG.check + addr;
+  snippets.html = `<a href="${link}"><img src="${img}" alt="Spendable on Tender" height="36"></a>`;
+  snippets.md = `[![Spendable on Tender](${img})](${link})`;
+  snippets.link = link;
+  $("s-html").textContent = snippets.html;
+  $("s-md").textContent = snippets.md;
+  $("s-link").textContent = snippets.link;
+  $("preview").innerHTML = `<div><a href="${link}"><img src="${img}" alt="Spendable on Tender badge"></a></div><div class="light"><a href="${link}"><img src="${img}" alt=""></a></div>`;
+  $("snips").classList.remove("hidden");
+  $("png").classList.remove("hidden");
+  const share = $("share");
+  share.href = "https://x.com/intent/post?text=" + encodeURIComponent("Our coin is spendable on @tenderpays: AI agents can pay any x402 API with it on Robinhood Chain.\n\nCheck yours:") + "&url=" + encodeURIComponent(link);
+  share.classList.remove("hidden");
+  history.replaceState(null, "", "?ca=" + addr);
+}
+
+$("form").addEventListener("submit", (e) => { e.preventDefault(); make($("ca").value); });
+document.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(snippets[b.dataset.copy]); b.textContent = "Copied"; } catch { b.textContent = "Select and copy"; }
+  setTimeout(() => (b.textContent = "Copy"), 1600);
+}));
+
+// PNG for X: draw the live SVG onto a canvas at 3x on the Tender navy
+$("png").addEventListener("click", async () => {
+  if (!current) return;
+  const b = $("png");
+  try {
+    const svg = await (await fetch(CFG.badge + current + ".svg")).text();
+    const img = new Image();
+    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
+    await img.decode();
+    const pad = 48, k = 3, w = img.width, h = img.height;
+    const c = document.createElement("canvas");
+    c.width = (w + pad * 2) * k; c.height = (h + pad * 2) * k;
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#0A1222"; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, pad * k, pad * k, w * k, h * k);
+    const a = document.createElement("a");
+    a.download = "spendable-on-tender.png";
+    a.href = c.toDataURL("image/png");
+    a.click();
+  } catch { b.textContent = "Couldn't make the PNG"; setTimeout(() => (b.textContent = "Download PNG for X"), 2000); }
+});
+
+const pre = new URLSearchParams(location.search).get("ca");
+if (pre) { $("ca").value = pre; make(pre); }
+</script>
+</body>
+</html>

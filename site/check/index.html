@@ -135,6 +135,7 @@
       <li><a href="/#build">Developers</a></li>
       <li><a href="/#fees">Fees</a></li>
       <li><a href="/check" aria-current="page">Check a coin</a></li>
+      <li><a href="/badge">Badge</a></li>
     </ul>
     <a class="btn btn-foil" href="/#build">Accept payments</a>
   </div>
@@ -325,7 +326,7 @@ function renderSpendable(addr, t, q) {
     <div class="actions">
       <a class="btn btn-foil" href="${shareUrl(text, addr)}" target="_blank" rel="noopener">Share on X</a>
       <button class="btn btn-ghost" type="button" data-copy="${CFG.site}?ca=${addr}">Copy link</button>
-      <a class="btn btn-ghost" href="/#build">Accept payments</a>
+      <a class="btn btn-ghost" href="/badge?ca=${addr}">Get the badge</a>
     </div>`;
 }
 
@@ -352,6 +353,7 @@ function renderNotYet(addr, t) {
       <a class="btn btn-foil" href="${CFG.pons}${addr}" target="_blank" rel="noopener">View on Pons</a>
       <a class="btn btn-ghost" href="${shareUrl(text, addr)}" target="_blank" rel="noopener">Share on X</a>
       <button class="btn btn-ghost" type="button" data-copy="${CFG.site}?ca=${addr}">Copy link</button>
+      <a class="btn btn-ghost" href="/badge?ca=${addr}">Get the badge</a>
     </div>`;
 }
 

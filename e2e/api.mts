@@ -192,6 +192,14 @@ async function main() {
     check("treasury got $0.02 + both fees", got > 20_000n, `${Number(got) / 1e6} USDG`);
     const feed = (await (await fetch(FAC + "/feed")).json()) as any;
     check("both calls in the feed", feed.totals.payments === 2, JSON.stringify(feed.totals));
+    console.log("\n4. Spendable badge");
+    const b1 = await fetch(FAC + "/badge/" + meme + ".svg");
+    const svg1 = await b1.text();
+    check("badge for a routable coin says Spendable on Tender", b1.status === 200 && svg1.includes("Spendable on Tender") && svg1.includes("$RHDOGE"), b1.headers.get("content-type") ?? "");
+    check("badge is cached for 5 minutes", (b1.headers.get("cache-control") ?? "").includes("max-age=300"));
+    const b2 = await fetch(FAC + "/badge/0x000000000000000000000000000000000000dEaD.svg");
+    check("badge for a non-token says Not a token", (await b2.text()).includes("Not a token"));
+    check("badge for a bad address is 404", (await fetch(FAC + "/badge/nope.svg")).status === 404);
     check("health still fine", (await (await fetch(FAC + "/healthz")).json() as any).ok === true);
   } finally {
     servers.forEach((s) => s.close());

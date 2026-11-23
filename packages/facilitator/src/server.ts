@@ -19,6 +19,7 @@ import { UniswapAdapter } from "./adapters/uniswap.ts";
 import { settleExact, verifyExact } from "./schemes/exact.ts";
 import { SwapScheme } from "./schemes/swap.ts";
 import { mountPaidApi } from "./demo.ts";
+import { mountBadge } from "./badge.ts";
 
 // ------------------------------------------------------------------ small persistent store
 
@@ -189,6 +190,7 @@ export function createApp(cfg: Config) {
 
   app.get("/feed", (_req, res) => res.json({ totals: store.data.totals, recent: store.data.feed.slice(0, 50) }));
   if (process.env.PAID_API !== "false") mountPaidApi(app, cfg, adapter);
+  mountBadge(app, cfg, adapter);
 
   app.get("/healthz", (_req, res) => res.json({ ok: true, relayer: cfg.account.address, network: cfg.network }));
 
