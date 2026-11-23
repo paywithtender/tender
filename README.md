@@ -13,6 +13,7 @@
 | | |
 |---|---|
 | Website | https://paywithtender.com |
+| Docs | https://paywithtender.com/docs: quickstarts, fees, facilitator API, addresses |
 | Coin checker | https://paywithtender.com/check — is a token spendable, and what does $1 cost in it |
 | Facilitator | https://facilitator.paywithtender.com (`/supported`, `/quote`, `/verify`, `/settle`, `/feed`) |
 | Tender API | https://facilitator.paywithtender.com/api — paid endpoints (`/api/gas`, `/api/token?address=`), $0.01 per call, any coin |

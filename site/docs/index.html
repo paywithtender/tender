@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tender docs: accept and pay x402 with any token on Robinhood Chain</title>
+<meta name="description" content="How to accept x402 payments and pay from AI agents with any token on Robinhood Chain. Quickstarts for the x402 SDKs, the Tender SDK and the MCP server, plus fees, the facilitator API and contract addresses.">
+<meta property="og:title" content="Tender docs">
+<meta property="og:description" content="Accept x402 payments in USDG. Let agents pay with any token on Robinhood Chain.">
+<meta property="og:url" content="https://paywithtender.com/docs">
+<link rel="canonical" href="https://paywithtender.com/docs">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gloock&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0A1222; --plate: #121D33; --rule: #22304D; --engrave: #8E9CB8; --paper: #EEF1F7;
+    --signal: #7CF0C5; --warn: #FFD3A3;
+    --foil-a: #9AE6D8; --foil-b: #B6A6FF; --foil-c: #FFD3A3;
+    --foil: linear-gradient(110deg, var(--foil-a), var(--foil-b) 45%, var(--foil-c) 80%, var(--foil-a));
+    --serif: "Gloock", "Times New Roman", serif;
+    --sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SFMono-Regular", monospace;
+    --wrap: 1180px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-padding-top: 92px; }
+  body { background: var(--ink); color: var(--paper); font: 400 17px/1.65 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; }
+  :focus-visible { outline: 2px solid var(--foil-a); outline-offset: 3px; border-radius: 4px; }
+  .wrap { width: min(100% - 48px, var(--wrap)); margin-inline: auto; }
+
+  nav.top { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--ink) 78%, transparent); backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%); border-bottom: 1px solid color-mix(in srgb, var(--rule) 60%, transparent); }
+  nav.top .wrap { display: flex; align-items: center; gap: 32px; height: 68px; }
+  .mark { display: flex; align-items: center; gap: 10px; text-decoration: none; font: 400 24px/1 var(--serif); letter-spacing: -0.01em; }
+  .mark svg { width: 26px; height: 26px; }
+  nav.top ul { display: flex; gap: 28px; list-style: none; margin-left: auto; font-size: 15px; color: var(--engrave); }
+  nav.top ul a { text-decoration: none; transition: color .2s; }
+  nav.top ul a:hover, nav.top ul a[aria-current] { color: var(--paper); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 999px; font: 500 14px/1 var(--sans); text-decoration: none; cursor: pointer; border: 0; white-space: nowrap; }
+  .btn-foil { background: var(--foil); background-size: 200% 100%; color: var(--ink); box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset; transition: background-position .3s; }
+  .btn-foil:hover { background-position: 100% 0; }
+
+  .layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 72px; padding: 64px 0 120px; }
+  .toc { position: sticky; top: 108px; align-self: start; font-size: 14px; }
+  .toc p { color: var(--paper); font-weight: 500; margin-bottom: 10px; }
+  .toc ol { list-style: none; border-left: 1px solid var(--rule); }
+  .toc a { display: block; padding: 5px 0 5px 16px; margin-left: -1px; border-left: 1px solid transparent; color: var(--engrave); text-decoration: none; transition: color .2s, border-color .2s; }
+  .toc a:hover { color: var(--paper); }
+  .toc a.on { color: var(--paper); border-left-color: var(--foil-b); }
+
+  article { max-width: 760px; min-width: 0; }
+  h1 { font: 400 clamp(44px, 5.6vw, 72px)/1 var(--serif); letter-spacing: -0.025em; text-wrap: balance; }
+  .lede { margin-top: 20px; font-size: 19px; color: color-mix(in srgb, var(--paper) 80%, var(--engrave)); max-width: 36em; }
+  section { padding-top: 64px; }
+  h2 { font: 400 36px/1.1 var(--serif); letter-spacing: -0.015em; }
+  h3 { font: 500 19px/1.3 var(--sans); margin: 36px 0 10px; }
+  p { margin-top: 14px; color: color-mix(in srgb, var(--paper) 84%, var(--engrave)); }
+  article ul, article ol.steps { margin-top: 14px; padding-left: 1.2em; color: color-mix(in srgb, var(--paper) 84%, var(--engrave)); }
+  article li { padding: 3px 0; }
+  article a { text-decoration-color: color-mix(in srgb, var(--foil-b) 70%, transparent); text-underline-offset: 3px; }
+  article a:hover { text-decoration-color: var(--foil-a); }
+  code { font: 400 .88em/1 var(--mono); background: var(--plate); padding: 2px 6px; border-radius: 6px; box-shadow: 0 0 0 1px var(--rule) inset; overflow-wrap: anywhere; }
+
+  .paths { margin-top: 32px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .paths a { display: block; padding: 20px; border-radius: 16px; text-decoration: none; background: color-mix(in srgb, var(--plate) 70%, transparent); box-shadow: 0 0 0 1px var(--rule) inset; transition: box-shadow .2s; }
+  .paths a:hover { box-shadow: 0 0 0 1px var(--engrave) inset; }
+  .paths b { display: block; font: 400 22px/1.15 var(--serif); }
+  .paths span { display: block; margin-top: 8px; font-size: 14px; line-height: 1.5; color: var(--engrave); }
+
+  .code { margin-top: 18px; border-radius: 14px; background: #060C18; box-shadow: 0 0 0 1px var(--rule) inset; overflow: hidden; }
+  .code header { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px 8px 16px; border-bottom: 1px solid var(--rule); font-size: 13px; color: var(--engrave); }
+  .code header button { font: 500 12px/1 var(--sans); color: var(--paper); background: var(--plate); border: 0; cursor: pointer; height: 28px; padding: 0 12px; border-radius: 999px; box-shadow: 0 0 0 1px var(--rule) inset; }
+  .code header button:hover { box-shadow: 0 0 0 1px var(--engrave) inset; }
+  .code pre { padding: 14px 16px; overflow-x: auto; font: 400 13.5px/1.65 var(--mono); color: #C9D2E3; tab-size: 2; }
+  .code pre .c { color: #6C7A96; }
+  .code pre .s { color: var(--foil-a); }
+  .code pre .k { color: var(--foil-b); }
+
+  table { width: 100%; margin-top: 18px; border-collapse: collapse; font-size: 15px; }
+  th { text-align: left; font-weight: 500; color: var(--engrave); padding: 0 16px 10px 0; border-bottom: 1px solid var(--rule); }
+  td { padding: 12px 16px 12px 0; border-bottom: 1px solid var(--rule); vertical-align: top; color: color-mix(in srgb, var(--paper) 86%, var(--engrave)); }
+  td:first-child { color: var(--paper); white-space: nowrap; }
+  td .addr { font: 400 13px/1.4 var(--mono); overflow-wrap: anywhere; white-space: normal; }
+
+  .callout { margin-top: 22px; padding: 16px 20px; border-radius: 14px; font-size: 15px; background: color-mix(in srgb, var(--warn) 8%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--warn) 30%, transparent) inset; color: color-mix(in srgb, var(--paper) 88%, var(--warn)); }
+  .callout.ok { background: color-mix(in srgb, var(--signal) 7%, transparent); box-shadow: 0 0 0 1px color-mix(in srgb, var(--signal) 28%, transparent) inset; color: color-mix(in srgb, var(--paper) 88%, var(--signal)); }
+
+  footer { border-top: 1px solid var(--rule); padding: 32px 0 44px; color: var(--engrave); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: center; }
+  footer ul { display: flex; gap: 24px; list-style: none; }
+  footer ul a { text-decoration: none; }
+  footer ul a:hover { color: var(--paper); }
+  footer small { flex-basis: 100%; font-size: 13px; color: color-mix(in srgb, var(--engrave) 75%, transparent); }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 40px; }
+    .toc { display: none; }
+    nav.top ul { display: none; }
+    nav.top .btn { margin-left: auto; }
+    .paths { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    td:first-child { white-space: normal; }
+    table { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="foil" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9AE6D8"/><stop offset=".45" stop-color="#B6A6FF"/><stop offset=".8" stop-color="#FFD3A3"/><stop offset="1" stop-color="#9AE6D8"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<nav class="top" aria-label="Main">
+  <div class="wrap">
+    <a class="mark" href="/" aria-label="Tender home"><svg viewBox="0 0 26 26" aria-hidden="true" class="mark-svg"></svg>Tender</a>
+    <ul>
+      <li><a href="/#how">How it works</a></li>
+      <li><a href="/docs" aria-current="page">Docs</a></li>
+      <li><a href="/check">Check a coin</a></li>
+      <li><a href="/badge">Badge</a></li>
+      <li><a href="https://github.com/paywithtender/tender">GitHub</a></li>
+    </ul>
+    <a class="btn btn-foil" href="#accept">Accept payments</a>
+  </div>
+</nav>
+
+<div class="wrap layout">
+  <aside class="toc" aria-label="On this page">
+    <p>On this page</p>
+    <ol>
+      <li><a href="#start">Start here</a></li>
+      <li><a href="#accept">Accept payments</a></li>
+      <li><a href="#pay">Pay from an agent</a></li>
+      <li><a href="#fees">Fees and limits</a></li>
+      <li><a href="#tokens">Which tokens work</a></li>
+      <li><a href="#api">Facilitator API</a></li>
+      <li><a href="#paid-api">Tender API</a></li>
+      <li><a href="#badge">Badge</a></li>
+      <li><a href="#addresses">Addresses</a></li>
+      <li><a href="#security">Security</a></li>
+    </ol>
+  </aside>
+
+  <article>
+    <section id="start" style="padding-top:0">
+      <h1>Tender docs</h1>
+      <p class="lede">Tender is an x402 payment rail on Robinhood Chain. APIs get paid in exact USDG. Agents pay with whatever token they hold, and Tender swaps it on Uniswap inside the same transaction.</p>
+      <div class="paths">
+        <a href="#accept"><b>I run an API</b><span>Charge per call in USDG, and accept any token if you want.</span></a>
+        <a href="#mcp"><b>I use an AI app</b><span>Give Claude, Cursor or any MCP client a wallet that can pay.</span></a>
+        <a href="#pay"><b>I build agents</b><span>Pay x402 APIs from code with the token your agent holds.</span></a>
+      </div>
+      <p>Tender is a standard x402 v2 facilitator for Robinhood Chain (<code>eip155:4663</code>). If you already use Coinbase's <code>@x402/*</code> packages, point them at <code>https://facilitator.paywithtender.com</code> and you're done.</p>
+    </section>
+
+    <section id="accept">
+      <h2>Accept payments</h2>
+      <h3>With Coinbase's x402 SDK (USDG)</h3>
+      <p>Use the stock <code>exact</code> scheme. Tender covers the gas, within daily limits, and charges no fee.</p>
+      <div class="code"><header>server.ts<button data-copy>Copy</button></header><pre><span class="k">import</span> { paymentMiddleware, x402ResourceServer } <span class="k">from</span> <span class="s">"@x402/express"</span>;
+<span class="k">import</span> { HTTPFacilitatorClient } <span class="k">from</span> <span class="s">"@x402/core/server"</span>;
+<span class="k">import</span> { ExactEvmScheme } <span class="k">from</span> <span class="s">"@x402/evm/exact/server"</span>;
+
+<span class="k">const</span> server = <span class="k">new</span> x402ResourceServer(
+  <span class="k">new</span> HTTPFacilitatorClient({ url: <span class="s">"https://facilitator.paywithtender.com"</span> })
+).register(<span class="s">"eip155:4663"</span>, <span class="k">new</span> ExactEvmScheme());
+
+app.use(paymentMiddleware({
+  <span class="s">"GET /weather"</span>: { accepts: [{ scheme: <span class="s">"exact"</span>, price: <span class="s">"$0.01"</span>, network: <span class="s">"eip155:4663"</span>, payTo: <span class="s">"0xYourAddress"</span> }] },
+}, server));</pre></div>
+
+      <h3>Accept any token</h3>
+      <p>Add <code>@paywithtender/x402</code> and a <code>tender-swap</code> entry next to <code>exact</code>. Agents holding ETH, $TENDER or any coin with a Uniswap route can now pay. You still receive exactly the price in USDG, and the agent pays the swap fee.</p>
+      <div class="code"><header>Terminal<button data-copy>Copy</button></header><pre>npm install @paywithtender/x402</pre></div>
+      <div class="code"><header>server.ts<button data-copy>Copy</button></header><pre><span class="k">import</span> { TenderSwapServer } <span class="k">from</span> <span class="s">"@paywithtender/x402"</span>;
+
+server.register(<span class="s">"eip155:4663"</span>, <span class="k">new</span> TenderSwapServer());
+
+<span class="c">// in the route config</span>
+accepts: [
+  { scheme: <span class="s">"exact"</span>,       price: <span class="s">"$0.01"</span>, network: <span class="s">"eip155:4663"</span>, payTo: <span class="s">"0xYourAddress"</span> }, <span class="c">// USDG</span>
+  { scheme: <span class="s">"tender-swap"</span>, price: <span class="s">"$0.01"</span>, network: <span class="s">"eip155:4663"</span>, payTo: <span class="s">"0xYourAddress"</span> }, <span class="c">// any token</span>
+]</pre></div>
+
+      <h3>With the Tender SDK (Express)</h3>
+      <p>If you aren't on the x402 SDKs, <code>tenderPaywall</code> does both schemes in one middleware.</p>
+      <div class="code"><header>Terminal<button data-copy>Copy</button></header><pre>npm install @paywithtender/sdk viem</pre></div>
+      <div class="code"><header>server.ts<button data-copy>Copy</button></header><pre><span class="k">import</span> express <span class="k">from</span> <span class="s">"express"</span>;
+<span class="k">import</span> { tenderPaywall } <span class="k">from</span> <span class="s">"@paywithtender/sdk"</span>;
+
+<span class="k">const</span> app = express();
+app.use(tenderPaywall({
+  payTo: <span class="s">"0xYourWallet"</span>,
+  facilitator: <span class="s">"https://facilitator.paywithtender.com"</span>,
+  routes: { <span class="s">"GET /premium"</span>: { price: <span class="s">"$0.05"</span>, description: <span class="s">"Premium data"</span> } },
+}));
+app.get(<span class="s">"/premium"</span>, (req, res) =&gt; res.json({ data: <span class="s">"…"</span> }));</pre></div>
+      <p>Unpaid requests get a <code>402</code> with the payment options. Paid requests are verified and settled on-chain before your handler runs.</p>
+    </section>
+
+    <section id="pay">
+      <h2>Pay from an agent</h2>
+      <h3 id="mcp">From Claude, Cursor or any MCP client</h3>
+      <p>The MCP server gives your AI four tools: <code>check_coin</code>, <code>quote</code>, <code>wallet</code> and <code>pay</code>. Add it to your client's config (for Claude Desktop, <code>claude_desktop_config.json</code>):</p>
+      <div class="code"><header>claude_desktop_config.json<button data-copy>Copy</button></header><pre>{
+  <span class="s">"mcpServers"</span>: {
+    <span class="s">"tender"</span>: {
+      <span class="s">"command"</span>: <span class="s">"npx"</span>,
+      <span class="s">"args"</span>: [<span class="s">"-y"</span>, <span class="s">"@paywithtender/mcp"</span>],
+      <span class="s">"env"</span>: {
+        <span class="s">"TENDER_PRIVATE_KEY"</span>: <span class="s">"0xYOUR_AGENT_WALLET_KEY"</span>,
+        <span class="s">"TENDER_PAY_WITH"</span>: <span class="s">"0xTOKEN_THE_AGENT_HOLDS"</span>,
+        <span class="s">"TENDER_MAX_PER_CALL_USD"</span>: <span class="s">"0.50"</span>,
+        <span class="s">"TENDER_DAILY_LIMIT_USD"</span>: <span class="s">"5"</span>
+      }
+    }
+  }
+}</pre></div>
+      <div class="callout">Use a fresh wallet that holds only what you're happy for the agent to spend. The key stays on your machine: payments are signed locally and only the signature is sent. Leave out <code>TENDER_PRIVATE_KEY</code> to run read-only.</div>
+      <p>Then try it on Tender's own paid API. Ask your AI: <em>"Pay https://facilitator.paywithtender.com/api/gas with my bag."</em> It costs $0.01 plus gas. All settings are in the <a href="https://github.com/paywithtender/tender/tree/main/packages/mcp#readme">MCP server README</a>.</p>
+
+      <h3>With Coinbase's x402 fetch</h3>
+      <div class="code"><header>agent.ts<button data-copy>Copy</button></header><pre><span class="k">import</span> { wrapFetchWithPaymentFromConfig } <span class="k">from</span> <span class="s">"@x402/fetch"</span>;
+<span class="k">import</span> { TenderSwapClient } <span class="k">from</span> <span class="s">"@paywithtender/x402"</span>;
+<span class="k">import</span> { privateKeyToAccount } <span class="k">from</span> <span class="s">"viem/accounts"</span>;
+
+<span class="k">const</span> account = privateKeyToAccount(process.env.AGENT_KEY);
+<span class="k">const</span> pay = wrapFetchWithPaymentFromConfig(fetch, {
+  schemes: [{ network: <span class="s">"eip155:4663"</span>, client: <span class="k">new</span> TenderSwapClient({ account, payWith: <span class="s">"0xTokenYouHold"</span> }) }],
+});
+
+<span class="k">const</span> res = <span class="k">await</span> pay(<span class="s">"https://api.example.com/data"</span>);</pre></div>
+      <p>Agents that hold USDG can keep using the stock <code>ExactEvmScheme</code> client with no changes.</p>
+
+      <h3>With the Tender SDK</h3>
+      <div class="code"><header>agent.ts<button data-copy>Copy</button></header><pre><span class="k">import</span> { wrapFetchWithTender } <span class="k">from</span> <span class="s">"@paywithtender/sdk"</span>;
+
+<span class="k">const</span> pay = wrapFetchWithTender(fetch, {
+  account,                     <span class="c">// viem LocalAccount</span>
+  chain: robinhood,            <span class="c">// chain id 4663</span>
+  payWith: <span class="s">"0xAnyLiquidToken"</span>, <span class="c">// leave out to pay in USDG</span>
+  maxUsdgPerCall: 1_000_000n,  <span class="c">// never more than $1 per call</span>
+  maxFeePerCall: 50_000n,      <span class="c">// skip if fees top $0.05</span>
+});
+
+<span class="k">const</span> res = <span class="k">await</span> pay(<span class="s">"https://api.example.com/premium"</span>);</pre></div>
+      <h3>First payment with a new token</h3>
+      <p>Each token needs one Permit2 approval before its first payment. The MCP server and <code>TenderSwapClient</code> send it for you. With the Tender SDK, call <code>ensurePermit2Approval</code> once. If the wallet has no ETH for gas, Tender covers that one approval.</p>
+      <div class="code"><header>agent.ts<button data-copy>Copy</button></header><pre><span class="k">import</span> { ensurePermit2Approval, ROBINHOOD } <span class="k">from</span> <span class="s">"@paywithtender/sdk"</span>;
+
+<span class="k">await</span> ensurePermit2Approval({ wallet, publicClient, token, permit2: ROBINHOOD.permit2, facilitator: <span class="s">"https://facilitator.paywithtender.com"</span> });</pre></div>
+    </section>
+
+    <section id="fees">
+      <h2>Fees and limits</h2>
+      <table>
+        <thead><tr><th>Paying with</th><th>Tender fee</th><th>Gas</th></tr></thead>
+        <tbody>
+          <tr><td>USDG, standard <code>exact</code></td><td>None</td><td>Covered by Tender, within daily limits</td></tr>
+          <tr><td>USDG, <code>tender-swap</code></td><td>None</td><td>Paid by the agent, quoted up front</td></tr>
+          <tr><td>$TENDER</td><td>None</td><td>Paid by the agent, quoted up front</td></tr>
+          <tr><td>Any other token</td><td>0.5%</td><td>Paid by the agent, quoted up front</td></tr>
+        </tbody>
+      </table>
+      <ul>
+        <li>The API always receives the exact price. Fees come from the agent's side.</li>
+        <li>Every fee is quoted before the agent signs. The contract caps the fee at 1% and the gas part at 1 USDG.</li>
+        <li>Unused input is refunded to the agent in the same transaction.</li>
+        <li>Standard <code>exact</code> payments start at $0.001. Tender covers gas for up to 30 of them per payer per day.</li>
+      </ul>
+    </section>
+
+    <section id="tokens">
+      <h2>Which tokens work</h2>
+      <p>Any token with a Uniswap route to USDG on Robinhood Chain, including ETH and Pons coins once they graduate. Tender refuses a payment when liquidity is too thin to swap at a fair price.</p>
+      <p>Check any coin at <a href="/check">paywithtender.com/check</a>: paste its contract address to see if it's spendable and what a payment costs in it. The <code>check_coin</code> MCP tool and the <code>/quote</code> endpoint give the same answer.</p>
+    </section>
+
+    <section id="api">
+      <h2>Facilitator API</h2>
+      <p>Base URL: <code>https://facilitator.paywithtender.com</code>. It follows x402 v2, so the x402 SDKs and <code>tenderPaywall</code> call it for you. You only need these endpoints if you're building your own client.</p>
+      <table>
+        <thead><tr><th>Endpoint</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET /supported</code></td><td>Supported schemes (<code>exact</code>, <code>tender-swap</code>), network and signer addresses.</td></tr>
+          <tr><td><code>POST /quote</code></td><td>What paying an amount costs in a token. Body: <code>{ "tokenIn": "0x…", "amount": "10000" }</code>, where <code>amount</code> is USDG with 6 decimals ($0.01 = <code>10000</code>). Returns the fee breakdown, estimated and maximum input, price impact and expiry.</td></tr>
+          <tr><td><code>POST /verify</code></td><td>Checks a signed payment against its requirements without sending anything.</td></tr>
+          <tr><td><code>POST /settle</code></td><td>Simulates, then settles the payment on-chain. Returns the transaction hash.</td></tr>
+          <tr><td><code>POST /sponsor</code></td><td>One-time gas for a wallet's first Permit2 approval. Body: <code>{ "payer": "0x…", "token": "0x…" }</code>.</td></tr>
+          <tr><td><code>GET /feed</code></td><td>Totals and the latest 50 settled payments.</td></tr>
+          <tr><td><code>GET /healthz</code></td><td>Status and relayer address.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="paid-api">
+      <h2>Tender API</h2>
+      <p>Tender runs its own paid endpoints, built with Tender. They're useful for testing a client against real mainnet payments. Each call costs $0.01 in any token.</p>
+      <table>
+        <thead><tr><th>Endpoint</th><th>Returns</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET /api</code></td><td>Free index of endpoints and prices.</td></tr>
+          <tr><td><code>GET /api/gas</code></td><td>Robinhood Chain gas price, ETH price and what a transaction costs in dollars.</td></tr>
+          <tr><td><code>GET /api/token?address=0x…</code></td><td>A token's price, market cap, and whether it's spendable on Tender. Invalid addresses are refused before you pay.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="badge">
+      <h2>Spendable badge</h2>
+      <p>A live SVG that shows whether a coin is spendable on Tender. It updates on its own, so a Pons coin flips to spendable when it graduates. Make one at <a href="/badge">paywithtender.com/badge</a>, or embed it directly:</p>
+      <div class="code"><header>HTML<button data-copy>Copy</button></header><pre>&lt;a href=<span class="s">"https://paywithtender.com/check?ca=0xYourToken"</span>&gt;
+  &lt;img src=<span class="s">"https://facilitator.paywithtender.com/badge/0xYourToken.svg"</span> alt=<span class="s">"Spendable on Tender"</span> height=<span class="s">"36"</span>&gt;
+&lt;/a&gt;</pre></div>
+    </section>
+
+    <section id="addresses">
+      <h2>Addresses</h2>
+      <table>
+        <tbody>
+          <tr><td>Network</td><td>Robinhood Chain, chain ID 4663 (<code>eip155:4663</code>)</td></tr>
+          <tr><td>RPC</td><td><span class="addr">https://rpc.mainnet.chain.robinhood.com</span></td></tr>
+          <tr><td>Settlement contract</td><td><a class="addr" href="https://robinhoodchain.blockscout.com/address/0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4">0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4</a> (verified)</td></tr>
+          <tr><td>$TENDER</td><td><a class="addr" href="https://robinhoodchain.blockscout.com/address/0xda4a075417d613ec018c8959fea6ab5ac5d5b78c">0xda4a075417d613ec018c8959fea6ab5ac5d5b78c</a></td></tr>
+          <tr><td>USDG</td><td><span class="addr">0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168</span></td></tr>
+          <tr><td>Permit2</td><td><span class="addr">0x000000000022D473030F116dDEE9F6B43aC78BA3</span></td></tr>
+        </tbody>
+      </table>
+      <table>
+        <thead><tr><th>Package</th><th>Use it for</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://www.npmjs.com/package/@paywithtender/x402">@paywithtender/x402</a></td><td>The <code>tender-swap</code> scheme for Coinbase's x402 SDKs</td></tr>
+          <tr><td><a href="https://www.npmjs.com/package/@paywithtender/sdk">@paywithtender/sdk</a></td><td><code>tenderPaywall</code> for APIs, <code>wrapFetchWithTender</code> for agents</td></tr>
+          <tr><td><a href="https://www.npmjs.com/package/@paywithtender/mcp">@paywithtender/mcp</a></td><td>The MCP server for AI apps</td></tr>
+        </tbody>
+      </table>
+      <p>Source code: <a href="https://github.com/paywithtender/tender">github.com/paywithtender/tender</a>. Independent verification: <a href="https://heyresearch.xyz/project/tender">Tender on HEY</a>.</p>
+    </section>
+
+    <section id="security">
+      <h2>Security</h2>
+      <ul>
+        <li>The agent's signature fixes the merchant, amount, fee and resource, so nobody in between can redirect a payment.</li>
+        <li>Every settlement is simulated before it's sent. If the swap returns less USDG than the price, the whole transaction reverts.</li>
+        <li>The contract holds no funds between transactions. Only allowlisted relayers can settle, and only allowlisted routers can be called.</li>
+        <li>The owner can pause the contract and set fees, but the fee is hard-capped at 1%.</li>
+      </ul>
+      <div class="callout">The contract has not had an external audit. Payment sizes are capped on-chain while it runs in production.</div>
+    </section>
+  </article>
+</div>
+
+<footer>
+  <div class="wrap">
+    <a class="mark" href="/" aria-label="Tender home"><svg viewBox="0 0 26 26" aria-hidden="true" class="mark-svg"></svg>Tender</a>
+    <ul>
+      <li><a href="/docs">Docs</a></li>
+      <li><a href="https://github.com/paywithtender/tender">GitHub</a></li>
+      <li><a href="https://x.com/tenderpays">X</a></li>
+    </ul>
+    <small>Tender is an independent project and is not affiliated with Robinhood Markets, Inc.</small>
+  </div>
+</footer>
+
+<script>
+function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+function hypo(R, r, d, s, steps, cx, cy) {
+  const turns = r / gcd(R, r); let p = "";
+  for (let i = 0; i <= steps; i++) {
+    const t = (i / steps) * Math.PI * 2 * turns;
+    const x = cx + s * ((R - r) * Math.cos(t) + d * Math.cos(((R - r) / r) * t));
+    const y = cy + s * ((R - r) * Math.sin(t) - d * Math.sin(((R - r) / r) * t));
+    p += (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+  }
+  return p;
+}
+document.querySelectorAll(".mark-svg").forEach((svg) => {
+  svg.innerHTML = [0, 6, 12].map((a) => `<path d="${hypo(10, 3, 4.2, 1.05, 500, 13, 13)}" transform="rotate(${a} 13 13)" fill="none" stroke="url(#foil)" stroke-width=".7"/>`).join("");
+});
+
+document.querySelectorAll("[data-copy]").forEach((b) => b.addEventListener("click", async () => {
+  const text = b.closest(".code").querySelector("pre").innerText;
+  try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; }
+  catch { b.textContent = "Select and copy"; }
+  setTimeout(() => (b.textContent = "Copy"), 1600);
+}));
+
+const links = [...document.querySelectorAll(".toc a")];
+const io = new IntersectionObserver((entries) => {
+  entries.forEach((e) => {
+    if (!e.isIntersecting) return;
+    links.forEach((a) => a.classList.toggle("on", a.getAttribute("href") === "#" + e.target.id));
+  });
+}, { rootMargin: "-20% 0px -70% 0px" });
+document.querySelectorAll("article > section").forEach((s) => io.observe(s));
+</script>
+</body>
+</html>
