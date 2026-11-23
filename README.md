@@ -6,7 +6,7 @@
 - Paying in **USDG**: Permit2 transfer, no swap. Fee = gas only.
 - Paying in **any other token**: in one transaction the payer's token is pulled with a Permit2 signature, swapped on Uniswap to USDG, the merchant is paid exactly, Tender keeps **0.5% + gas**, and any unused token is refunded.
 - **$TENDER** (`0xda4a075417d613ec018c8959fea6ab5ac5d5b78c`) is fee-exempt: gas only.
-- The standard x402 `exact` scheme (EIP-3009) is off by default because the facilitator would pay its gas with no way to charge for it. Turn it on with `EXACT_ENABLED=true` if you want plain x402 clients to work and are happy to subsidize them.
+- The standard x402 `exact` scheme (EIP-3009 USDG) is on in production: any standard x402 client or API on Robinhood Chain can use Tender. Tender pays its gas with no fee, capped by `EXACT_DAILY_MAX` and `EXACT_PER_PAYER_DAILY_MAX`.
 
 ## Live now
 
@@ -19,6 +19,25 @@
 | SDK | [`@paywithtender/sdk`](https://www.npmjs.com/package/@paywithtender/sdk) — `tenderPaywall` for APIs, `wrapFetchWithTender` for agents |
 | MCP server | [`@paywithtender/mcp`](https://www.npmjs.com/package/@paywithtender/mcp) — `npx -y @paywithtender/mcp`; tools `check_coin`, `quote`, `wallet`, `pay` ([setup](packages/mcp/README.md)) |
 | Contract | [`0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4`](https://robinhoodchain.blockscout.com/address/0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4) on Robinhood Chain (verified) |
+
+## Use Tender with the standard x402 SDKs
+
+Tender is a standard x402 v2 facilitator for Robinhood Chain (`eip155:4663`). APIs built with Coinbase's `@x402/*` packages can point at it as-is and get paid in USDG with the stock `exact` scheme. Tender covers the gas (within daily limits), and there is no Tender fee.
+
+```ts
+import { paymentMiddleware, x402ResourceServer } from "@x402/express";
+import { HTTPFacilitatorClient } from "@x402/core/server";
+import { ExactEvmScheme } from "@x402/evm/exact/server";
+
+const server = new x402ResourceServer(new HTTPFacilitatorClient({ url: "https://facilitator.paywithtender.com" }))
+  .register("eip155:4663", new ExactEvmScheme());
+
+app.use(paymentMiddleware({
+  "GET /weather": { accepts: [{ scheme: "exact", price: "$0.01", network: "eip155:4663", payTo: "0xYourAddress" }] },
+}, server));
+```
+
+Agents using `@x402/fetch` with `ExactEvmScheme` pay these endpoints with no changes. To also accept any token (swapped to USDG on Uniswap in the same transaction), use `tenderPaywall` from `@paywithtender/sdk`. It offers both `exact` and `tender-swap`. `npm run test:x402` runs Coinbase's packages against a local Tender stack.
 
 ## Layout
 

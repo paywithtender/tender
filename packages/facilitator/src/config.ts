@@ -33,6 +33,12 @@ export function loadConfig() {
     uniswapApiUrl: env("UNISWAP_API_URL", "https://trade-api.gateway.uniswap.org/v1"),
     mockRouter: (process.env.MOCK_ROUTER ?? "") as Address,
     exactEnabled: env("EXACT_ENABLED", "false") === "true", // plain EIP-3009 USDG: facilitator eats the gas
+    // Standard x402 "exact" payments cost Tender gas with no fee, so cap how many it covers.
+    exact: {
+      dailyMax: Number(env("EXACT_DAILY_MAX", "300")), // gas-covered exact settlements per UTC day, all payers
+      perPayerDailyMax: Number(env("EXACT_PER_PAYER_DAILY_MAX", "30")),
+      minAmount: BigInt(env("EXACT_MIN_AMOUNT", "1000")), // $0.001 in USDG units: no dust spam on Tender's gas
+    },
     gas: {
       swapUnits: BigInt(env("SETTLE_GAS_SWAP", "420000")), // gas for a swap settlement, incl. L1 data, with headroom
       usdgUnits: BigInt(env("SETTLE_GAS_USDG", "190000")),

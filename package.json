@@ -7,6 +7,7 @@
     "test:e2e": "node --import tsx e2e/run.ts",
     "test:mcp": "node --import tsx e2e/mcp.mts",
     "test:api": "node --import tsx e2e/api.mts",
+    "test:x402": "cd e2e/x402 && npm install --no-workspaces && cd ../.. && node --import tsx e2e/x402/standard.mts",
     "facilitator": "npm --workspace packages/facilitator run start"
   },
   "devDependencies": { "tsx": "^4.19.0", "typescript": "^5.6.0" }

@@ -21,9 +21,10 @@ export async function verifyExact(
   const payer = a.from;
   const fail = (invalidReason: string): VerifyResponse => ({ isValid: false, invalidReason, payer });
 
-  if (req.asset.toLowerCase() !== cfg.usdg.toLowerCase()) return fail("unsupported_asset");
+  if (req.asset.toLowerCase() !== cfg.usdg.toLowerCase()) return fail("invalid_payment_requirements");
+  if (BigInt(req.amount) < cfg.exact.minAmount) return fail("invalid_payment_requirements");
   if (a.to.toLowerCase() !== req.payTo.toLowerCase()) return fail("invalid_exact_evm_payload_recipient_mismatch");
-  if (BigInt(a.value) < BigInt(req.amount)) return fail("invalid_exact_evm_payload_authorization_value");
+  if (BigInt(a.value) < BigInt(req.amount)) return fail("invalid_exact_evm_payload_authorization_value_mismatch");
 
   const now = BigInt(Math.floor(Date.now() / 1000));
   if (BigInt(a.validBefore) < now + 6n) return fail("invalid_exact_evm_payload_authorization_valid_before");
@@ -56,7 +57,7 @@ export async function verifyExact(
     }),
   ]);
   if (balance < BigInt(a.value)) return fail("insufficient_funds");
-  if (used) return fail("invalid_exact_evm_payload_authorization_nonce_used");
+  if (used) return fail("invalid_transaction_state");
 
   return { isValid: true, payer };
 }

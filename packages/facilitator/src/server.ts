@@ -25,7 +25,12 @@ import { mountBadge } from "./badge.ts";
 
 class Store {
   private file: string;
-  data: { feed: any[]; sponsored: Record<string, number>; totals: { payments: number; usdg: string; fees: string } };
+  data: {
+    feed: any[];
+    sponsored: Record<string, number>;
+    totals: { payments: number; usdg: string; fees: string };
+    exactUsage?: { day: number; total: number; byPayer: Record<string, number> };
+  };
   constructor(dir: string) {
     fs.mkdirSync(dir, { recursive: true });
     this.file = path.join(dir, "state.json");
@@ -84,6 +89,7 @@ export function createApp(cfg: Config) {
           extra: { settlement: cfg.settlement, permit2: cfg.permit2, adapter: adapter.name },
         },
       ],
+      extensions: [],
       signers: { [cfg.network]: [cfg.account.address] },
     });
   });
@@ -129,10 +135,22 @@ export function createApp(cfg: Config) {
         queue.run(async () => {
           try {
             if (r.scheme === SCHEME_EXACT) {
-              if (!cfg.exactEnabled) return fail("exact_scheme_disabled");
+              if (!cfg.exactEnabled) return fail("unsupported_scheme");
               const v = await verifyExact(cfg, pp as PaymentPayload<ExactPayload>, r);
               if (!v.isValid) return fail(v.invalidReason!, v.payer);
-              return await settleExact(cfg, pp as PaymentPayload<ExactPayload>);
+              const usage = exactUsage();
+              const who = v.payer!.toLowerCase();
+              if (usage.total >= cfg.exact.dailyMax || (usage.byPayer[who] ?? 0) >= cfg.exact.perPayerDailyMax) {
+                return fail("facilitator_daily_limit_reached", v.payer);
+              }
+              const out = await settleExact(cfg, pp as PaymentPayload<ExactPayload>);
+              if (out.success) {
+                usage.total += 1;
+                usage.byPayer[who] = (usage.byPayer[who] ?? 0) + 1;
+                store.save();
+                await recordExact(out.transaction as Hex, pp as PaymentPayload<ExactPayload>).catch(() => {});
+              }
+              return out;
             }
             if (r.scheme === SCHEME_SWAP) {
               const out = await swap.settle(pp as PaymentPayload<SwapPayload>, r);
@@ -237,6 +255,41 @@ export function createApp(cfg: Config) {
     t.payments += 1;
     t.usdg = (BigInt(t.usdg) + a.amountOut).toString();
     t.fees = (BigInt(t.fees) + a.fee).toString();
+    store.save();
+  }
+
+  /** Today's count of gas-covered standard "exact" settlements (resets each UTC day). */
+  function exactUsage() {
+    const today = Math.floor(Date.now() / 86_400_000);
+    if (!store.data.exactUsage || store.data.exactUsage.day !== today) store.data.exactUsage = { day: today, total: 0, byPayer: {} };
+    return store.data.exactUsage;
+  }
+
+  /** Standard x402 "exact" USDG payments don't go through the Tender contract, so record them directly. */
+  async function recordExact(hash: Hex, pp: PaymentPayload<ExactPayload>) {
+    if (store.data.feed.some((e: any) => e.tx === hash)) return;
+    const receipt = await cfg.publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status !== "success") return;
+    const block = await cfg.publicClient.getBlock({ blockNumber: receipt.blockNumber });
+    const a = pp.payload.authorization;
+    store.data.feed.unshift({
+      time: Number(block.timestamp) * 1000,
+      tx: hash,
+      decimals: 6,
+      payer: a.from,
+      merchant: a.to,
+      token: cfg.usdg,
+      symbol: "USDG",
+      amountIn: String(a.value),
+      usdg: String(a.value),
+      fee: "0",
+      scheme: SCHEME_EXACT,
+    });
+    store.data.feed.sort((x: any, y: any) => y.time - x.time);
+    store.data.feed = store.data.feed.slice(0, 500);
+    const t = store.data.totals;
+    t.payments += 1;
+    t.usdg = (BigInt(t.usdg) + BigInt(a.value)).toString();
     store.save();
   }
 

@@ -1,0 +1,12 @@
+{
+  "name": "tender-x402-compat-test",
+  "private": true,
+  "type": "module",
+  "description": "Coinbase's standard x402 packages, used only to test that they work with the Tender facilitator",
+  "dependencies": {
+    "@x402/core": "^2.32.0",
+    "@x402/evm": "^2.32.0",
+    "@x402/express": "^2.32.0",
+    "@x402/fetch": "^2.32.0"
+  }
+}
