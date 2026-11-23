@@ -18,6 +18,7 @@ import { MockAdapter } from "./adapters/mock.ts";
 import { UniswapAdapter } from "./adapters/uniswap.ts";
 import { settleExact, verifyExact } from "./schemes/exact.ts";
 import { SwapScheme } from "./schemes/swap.ts";
+import { mountPaidApi } from "./demo.ts";
 
 // ------------------------------------------------------------------ small persistent store
 
@@ -58,7 +59,8 @@ export function createApp(cfg: Config) {
   app.use(express.json({ limit: "64kb" }));
   app.use((_req, res, next) => {
     res.setHeader("access-control-allow-origin", "*");
-    res.setHeader("access-control-allow-headers", "content-type");
+    res.setHeader("access-control-allow-headers", "content-type, payment-signature, x-payment");
+    res.setHeader("access-control-expose-headers", "PAYMENT-REQUIRED, PAYMENT-RESPONSE");
     next();
   });
 
@@ -186,6 +188,8 @@ export function createApp(cfg: Config) {
   });
 
   app.get("/feed", (_req, res) => res.json({ totals: store.data.totals, recent: store.data.feed.slice(0, 50) }));
+  if (process.env.PAID_API !== "false") mountPaidApi(app, cfg, adapter);
+
   app.get("/healthz", (_req, res) => res.json({ ok: true, relayer: cfg.account.address, network: cfg.network }));
 
   function fail(errorReason: string, payer?: Address): SettleResponse {

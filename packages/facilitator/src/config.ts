@@ -41,8 +41,12 @@ export function loadConfig() {
       ethUsd: process.env.ETH_USD_PRICE ?? "", // fixed ETH price; otherwise read from Uniswap via WETH
       weth: (process.env.WETH_ADDRESS ?? "") as Address,
     },
-    slippageBps: Number(env("SLIPPAGE_BPS", "300")), // buffer the payer signs on top of the quote
+    slippageBps: Number(env("SLIPPAGE_BPS", "300")), // slippage the swap route is built with
+    signBufferBps: Number(env("SIGN_BUFFER_BPS", "1000")), // extra the payer signs for on top of the quote; unused input is refunded
+    minRouteSlippageBps: Number(env("MIN_ROUTE_SLIPPAGE_BPS", "400")), // never route tighter than this (some v4 pools take a gas-price fee)
     maxPriceImpact: Number(env("MAX_PRICE_IMPACT", "0.05")), // tokens with thinner liquidity are refused
+    maxPriceImpactSmall: Number(env("MAX_PRICE_IMPACT_SMALL", "0.25")), // hard ceiling, even for tiny payments
+    maxImpactUsd6: BigInt(env("MAX_IMPACT_USD6", "50000")), // above MAX_PRICE_IMPACT, allow only if impact costs under $0.05
     quoteTtlSeconds: Number(env("QUOTE_TTL_SECONDS", "60")),
     denylist: new Set(
       (process.env.TOKEN_DENYLIST ?? "")

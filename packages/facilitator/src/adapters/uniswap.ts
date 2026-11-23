@@ -56,9 +56,22 @@ export class UniswapAdapter implements SwapAdapter {
   }
 
   async build(tokenIn: Address, usdgOut: bigint, maxAmountIn: bigint): Promise<BuiltSwap> {
-    const q = await this.rawQuote(tokenIn, usdgOut, this.cfg.slippageBps / 100);
-    const quotedIn = BigInt(q.quote?.input?.amount ?? 0);
-    if (quotedIn > maxAmountIn) throw new Error("price moved past the payer's signed maximum");
+    // The proxy router pulls the route's full maximum (quote + slippage) up front and refunds the rest,
+    // and the settlement contract only approves what the payer signed. So the route's maximum must fit
+    // under the signed maximum, or the router's pull fails. On fast-moving tokens the fresh quote can be
+    // higher than the payer's, so narrow the slippage to the room that's left (never below MIN_ROUTE_SLIPPAGE).
+    const fullBps = this.cfg.slippageBps;
+    const pulls = (quotedIn: bigint, bps: number) => (quotedIn * BigInt(10_000 + bps + 10)) / 10_000n; // +0.1% for rounding
+    let q = await this.rawQuote(tokenIn, usdgOut, fullBps / 100);
+    let quotedIn = BigInt(q.quote?.input?.amount ?? 0);
+    if (quotedIn === 0n || quotedIn > maxAmountIn) throw new Error("price moved past the payer's signed maximum");
+    if (pulls(quotedIn, fullBps) > maxAmountIn) {
+      const room = Number((maxAmountIn * 10_000n) / quotedIn - 10_000n) - 15;
+      if (room < this.cfg.minRouteSlippageBps) throw new Error("price moved past the payer's signed maximum");
+      q = await this.rawQuote(tokenIn, usdgOut, room / 100);
+      quotedIn = BigInt(q.quote?.input?.amount ?? 0);
+      if (quotedIn === 0n || pulls(quotedIn, room) > maxAmountIn) throw new Error("price moved past the payer's signed maximum");
+    }
 
     // /swap wants the quote response flat, without null permit fields.
     const body: Record<string, unknown> = { ...q };

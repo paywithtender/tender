@@ -3,7 +3,8 @@
  *   demo paid API (local, $0.01, settles through the LIVE facilitator) + MCP server with the test agent wallet
  *   → an MCP client calls check_coin, wallet, then pay → a real Robinhood Chain transaction.
  *
- * Run from packages/facilitator:  PAY_WITH=0x<token> node --import tsx ../../e2e/mcp-mainnet.mts
+ * Run from the repo root:  PAY_WITH=0x<token> node --import tsx e2e/mcp-mainnet.mts
+ * PAY_URL=<url> pays that live API instead of the local demo (e.g. https://facilitator.paywithtender.com/api/gas).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -24,6 +25,7 @@ async function main() {
   const agentKey = JSON.parse(fs.readFileSync(path.join(ROOT, ".wallets/agent.json"), "utf8")).privateKey as Hex;
   const merchant = wallets.deployer.address as Address;
   const payWith = (process.env.PAY_WITH || ROBINHOOD.usdg) as Address;
+  const payUrl = process.env.PAY_URL || "http://127.0.0.1:4022/gas";
 
   // Demo paid API on this PC; payments settle through the live facilitator, so they land in the site's feed
   const pc = createPublicClient({ transport: http(RPC) });
@@ -40,7 +42,7 @@ async function main() {
     const [block, gasPrice] = await Promise.all([pc.getBlockNumber(), pc.getGasPrice()]);
     res.json({ chain: "Robinhood Chain", block: block.toString(), gasPriceGwei: Number(gasPrice) / 1e9 });
   });
-  const srv = api.listen(4022);
+  const srv = process.env.PAY_URL ? { close() {} } : api.listen(4022);
 
   const { server } = createTenderMcp(
     configFromEnv({
@@ -70,7 +72,7 @@ async function main() {
     console.log("Tender MCP server: real payment on Robinhood Chain");
     await call("check_coin", { token: payWith });
     await call("wallet");
-    const paid = await call("pay", { url: "http://127.0.0.1:4022/gas" });
+    const paid = await call("pay", { url: payUrl });
     if (!paid.structuredContent?.paid) throw new Error("the API answered but nothing was paid");
     console.log("\nPASSED: an AI agent paid a real API through the Tender MCP server.");
   } finally {

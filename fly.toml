@@ -12,6 +12,7 @@ primary_region = "iad"
   SWAP_ADAPTER = "uniswap"
   SLIPPAGE_BPS = "500"
   MAX_PRICE_IMPACT = "0.05"
+  MAX_PRICE_IMPACT_SMALL = "0.6"     # tiny payments: allowed up to 60% if the impact costs under $0.05 (MAX_IMPACT_USD6)
   SETTLE_GAS_SWAP = "420000"
   SETTLE_GAS_USDG = "190000"
   GAS_MARGIN_BPS = "2000"

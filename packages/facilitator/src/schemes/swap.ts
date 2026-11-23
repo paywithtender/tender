@@ -62,10 +62,19 @@ export class SwapScheme {
     }
 
     const q = await this.adapter.quote(tokenIn, amountOut + fee);
+    // Refuse thin liquidity. On tiny payments a pool's fixed per-swap costs (e.g. a gas-based hook fee) read as a
+    // large percentage while costing a fraction of a cent, so above the normal limit we still allow the swap when
+    // the extra cost in dollars is small, up to a hard ceiling.
     if (q.priceImpact !== undefined && q.priceImpact > this.cfg.maxPriceImpact) {
-      throw new Error("not enough liquidity for this token");
+      const swapUsd6 = amountOut + fee;
+      const overheadUsd6 = (swapUsd6 * BigInt(Math.round(q.priceImpact * 1_000_000))) / 1_000_000n;
+      if (q.priceImpact > this.cfg.maxPriceImpactSmall || overheadUsd6 > this.cfg.maxImpactUsd6) {
+        throw new Error(`not enough liquidity for this token (price impact ${(q.priceImpact * 100).toFixed(1)}%)`);
+      }
     }
-    const maxAmountIn = (q.amountIn * BigInt(10_000 + this.cfg.slippageBps)) / 10_000n;
+    // the payer signs for a cushion above the quote, so a fresh route a few seconds later still fits; unused input is refunded
+    const buffer = Math.max(this.cfg.signBufferBps, this.cfg.slippageBps);
+    const maxAmountIn = (q.amountIn * BigInt(10_000 + buffer)) / 10_000n;
     return { ...base, estimatedAmountIn: q.amountIn.toString(), maxAmountIn: maxAmountIn.toString(), priceImpact: q.priceImpact };
   }
 
