@@ -263,11 +263,11 @@ async function tokenInfo(addr) {
 }
 
 /* ---------------------------------------------------------------- quote */
-async function quote(tokenIn) {
+async function quote(tokenIn, amount = "1000000") {
   let lastErr;
   for (const base of CFG.facilitators) {
     try {
-      const r = await fetch(base + "/quote", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tokenIn, amount: "1000000" }) });
+      const r = await fetch(base + "/quote", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tokenIn, amount }) });
       const j = await r.json();
       if (r.ok) return { ok: true, q: j };
       return { ok: false, reason: j.error || "unknown" };
@@ -304,7 +304,9 @@ function shareUrl(text, addr) {
   return `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(u)}`;
 }
 
-function renderSpendable(addr, t, q) {
+function renderSpendable(addr, t, q, usdAmount) {
+  const thin = usdAmount < 1;
+  const amountLabel = thin ? "$0.10" : "$1.00";
   const isUsdg = addr.toLowerCase() === CFG.usdg;
   const protocol = BigInt(q.feeBreakdown.protocol), gas = BigInt(q.feeBreakdown.gas);
   const tenderFee = protocol === 0n ? (isUsdg ? "None (USDG)" : "None") : `0.5% (${usd(protocol)})`;
@@ -315,9 +317,9 @@ function renderSpendable(addr, t, q) {
   result.innerHTML = `
     <div class="r-head"><b>${esc(t.name)}</b><span>$${sym}</span></div>
     <p class="verdict yes"><i></i>Spendable</p>
-    <p class="note">Agents can pay any Tender-enabled API with ${sym} right now. The merchant receives exact USDG.</p>
+    <p class="note">Agents can pay any Tender-enabled API with ${sym} right now. The merchant receives exact USDG.${thin ? " Liquidity is thin, so small payments work best: a $1 payment would move the price more than 5%." : ""}</p>
     <dl class="rows">
-      <div class="r-row"><dt>Merchant receives</dt><dd>$1.00 USDG</dd></div>
+      <div class="r-row"><dt>Merchant receives</dt><dd>${amountLabel} USDG</dd></div>
       <div class="r-row"><dt>Tender fee</dt><dd>${tenderFee}</dd></div>
       <div class="r-row"><dt>Network gas</dt><dd>${usd(gas)}</dd></div>
       ${isUsdg ? "" : `<div class="r-row"><dt>Swap price impact</dt><dd>${impact}</dd></div>`}
@@ -376,9 +378,16 @@ async function check(raw) {
     const t = await tokenInfo(addr);
     if (id !== running) return;
     if (!t) { renderIdle(); $("err").textContent = "No token found at that address on Robinhood Chain. Check you copied the full CA."; return; }
-    const res = await quote(addr);
+    let res = await quote(addr, "1000000");
     if (id !== running) return;
-    if (res.ok) return renderSpendable(addr, t, res.q);
+    if (res.ok) return renderSpendable(addr, t, res.q, 1);
+    // too thin for a $1 swap? most API payments are cents, so check a $0.10 payment before saying "not yet"
+    if (/price impact/i.test(String(res.reason))) {
+      const small = await quote(addr, "100000");
+      if (id !== running) return;
+      if (small.ok) return renderSpendable(addr, t, small.q, 0.1);
+      res = small;
+    }
     const reason = String(res.reason).toLowerCase();
     if (reason.includes("noroute") || reason.includes("no route") || reason.includes("liquidity")) return renderNotYet(addr, t);
     if (reason.includes("not accepted")) { renderIdle(); $("err").textContent = "Tender doesn't accept this token."; return; }

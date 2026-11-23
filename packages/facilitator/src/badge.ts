@@ -1,7 +1,7 @@
 /**
  * "Spendable on Tender" badge: a live SVG any token can embed on its site, docs or README.
  *
- *   GET /badge/:address.svg   → Spendable on Tender   (has a Uniswap route to USDG with real liquidity)
+ *   GET /badge/:address.svg   → Spendable on Tender   (a $0.10 payment routes to USDG on Uniswap)
  *                             → Spendable at graduation (no route yet, e.g. still on a Pons curve)
  *
  * The status is checked live and cached for a few minutes, so a coin's badge flips on its own when it graduates.
@@ -74,8 +74,13 @@ export function mountBadge(app: Express, cfg: Config, adapter: SwapAdapter) {
     if (symbol === null || decimals === null) return { state: "invalid", symbol: "" };
     if (address.toLowerCase() === cfg.usdg.toLowerCase()) return { state: "spendable", symbol };
     try {
-      const q = await adapter.quote(address, 1_000_000n);
-      const ok = q.priceImpact === undefined || q.priceImpact <= cfg.maxPriceImpact;
+      // check at API-payment size ($0.10): most Tender payments are cents, and a thin pool can take those
+      // even when a $1 swap would move the price too much. Same rule as the facilitator's quote.
+      const amount = 100_000n;
+      const q = await adapter.quote(address, amount);
+      const impact = q.priceImpact ?? 0;
+      const overhead = (amount * BigInt(Math.round(impact * 1_000_000))) / 1_000_000n;
+      const ok = impact <= cfg.maxPriceImpact || (impact <= cfg.maxPriceImpactSmall && overhead <= cfg.maxImpactUsd6);
       return { state: ok ? "spendable" : "graduation", symbol };
     } catch (e: any) {
       if (/noroute|no route|liquidity/i.test(String(e.message ?? e))) return { state: "graduation", symbol };
