@@ -5,6 +5,7 @@
   "scripts": {
     "test:contracts": "npm --workspace contracts run test",
     "test:e2e": "node --import tsx e2e/run.ts",
+    "test:mcp": "node --import tsx e2e/mcp.mts",
     "facilitator": "npm --workspace packages/facilitator run start"
   },
   "devDependencies": { "tsx": "^4.19.0", "typescript": "^5.6.0" }

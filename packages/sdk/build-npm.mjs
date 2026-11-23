@@ -17,7 +17,7 @@ fs.cpSync(path.join(here, "dist"), path.join(out, "dist"), { recursive: true });
 fs.copyFileSync(path.join(here, "README.md"), path.join(out, "README.md"));
 const pkg = {
   name: "@paywithtender/sdk",
-  version: process.env.SDK_VERSION || "0.1.1",
+  version: process.env.SDK_VERSION || "0.1.2",
   description: "Pay any x402 API with any token on Robinhood Chain. Merchants get exact USDG.",
   license: "MIT",
   homepage: "https://paywithtender.com",
@@ -26,7 +26,7 @@ const pkg = {
   type: "module",
   main: "./dist/index.js",
   types: "./dist/index.d.ts",
-  exports: { ".": { types: "./dist/index.d.ts", import: "./dist/index.js" } },
+  exports: { ".": { types: "./dist/index.d.ts", import: "./dist/index.js", default: "./dist/index.js" } },
   files: ["dist", "README.md"],
   engines: { node: ">=20" },
   dependencies: { viem: "^2.21.0" },
