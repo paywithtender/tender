@@ -24,7 +24,7 @@
   "main": "./dist/server.js",
   "types": "./dist/server.d.ts",
   "bin": {
-    "tender-mcp": "./dist/cli.js"
+    "tender-mcp": "dist/cli.js"
   },
   "exports": {
     ".": {
