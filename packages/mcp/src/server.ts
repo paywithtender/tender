@@ -30,7 +30,7 @@ import {
   type SwapQuote,
 } from "@paywithtender/sdk";
 
-export const VERSION = "0.1.0";
+export const VERSION = "0.1.1";
 
 export interface TenderMcpConfig {
   /** Agent wallet key. Without it, only the read-only tools work. */

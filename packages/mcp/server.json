@@ -1,0 +1,27 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.paywithtender/tender",
+  "title": "Tender",
+  "description": "Let AI agents pay x402 APIs with any token on Robinhood Chain. Merchants get exact USDG.",
+  "websiteUrl": "https://paywithtender.com/docs",
+  "repository": {
+    "url": "https://github.com/paywithtender/tender",
+    "source": "github",
+    "subfolder": "packages/mcp"
+  },
+  "version": "0.1.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@paywithtender/mcp",
+      "version": "0.1.1",
+      "transport": { "type": "stdio" },
+      "environmentVariables": [
+        { "name": "TENDER_PRIVATE_KEY", "description": "Private key of a dedicated agent wallet. Leave out to run read-only.", "isRequired": false, "isSecret": true, "format": "string" },
+        { "name": "TENDER_PAY_WITH", "description": "Token address to pay with. Defaults to USDG.", "isRequired": false, "format": "string" },
+        { "name": "TENDER_MAX_PER_CALL_USD", "description": "Refuse any API priced above this, in USD. Default 1.", "isRequired": false, "format": "string" },
+        { "name": "TENDER_DAILY_LIMIT_USD", "description": "Total the agent may spend per UTC day, in USD. Default 10.", "isRequired": false, "format": "string" }
+      ]
+    }
+  ]
+}

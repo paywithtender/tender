@@ -9,3 +9,6 @@ contracts/deployments/*.json
 .wallets
 packages/sdk/dist
 packages/sdk/npm
+mcp-publisher.exe
+mcp-publisher.tar.gz
+.mcpregistry_*
