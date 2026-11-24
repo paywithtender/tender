@@ -70,7 +70,7 @@ function artifact(name: string) {
 }
 
 async function main() {
-  const node = spawn("npx", ["hardhat", "node", "--port", "8545"], { cwd: path.join(ROOT, "contracts"), stdio: "ignore" });
+  const node = spawn(process.execPath, [path.join(ROOT, "contracts/node_modules/hardhat/internal/cli/bootstrap.js"), "node", "--port", "8545"], { cwd: path.join(ROOT, "contracts"), stdio: "ignore" });
   const servers: { close(): void }[] = [];
   try {
     const pc = createPublicClient({ chain, transport: http(RPC) });
