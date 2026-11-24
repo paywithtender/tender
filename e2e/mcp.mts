@@ -123,7 +123,7 @@ async function main() {
       SPONSOR_ENABLED: "true",
       SPONSOR_MAX_WEI: "1000000000000000",
       ETH_USD_PRICE: "10", // Hardhat gas is ~100x Robinhood Chain's, so a low ETH price keeps fees realistic
-      DATA_DIR: fs.mkdtempSync("/tmp/tender-mcp-"),
+      DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), "tender-mcp-")),
       PORT: "4021",
     });
     const cfg = loadConfig();

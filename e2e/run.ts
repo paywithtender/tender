@@ -5,6 +5,7 @@
  */
 import { spawn } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import express from "express";
 import {
@@ -118,7 +119,7 @@ async function main() {
       SPONSOR_ENABLED: "true",
       SPONSOR_MAX_WEI: "1000000000000000",
       ETH_USD_PRICE: "10", // Hardhat gas is ~100x Robinhood Chain's, so a low ETH price keeps fees realistic
-      DATA_DIR: fs.mkdtempSync("/tmp/tender-e2e-"),
+      DATA_DIR: fs.mkdtempSync(path.join(os.tmpdir(), "tender-e2e-")),
       PORT: "4021",
     });
     const cfg = loadConfig();
