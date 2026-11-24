@@ -27,6 +27,9 @@ import { createTenderMcp, configFromEnv } from "../packages/mcp/src/server.ts";
 import { ensurePermit2Approval, wrapFetchWithTender } from "../packages/sdk/src/client.ts";
 import { HEADER_RESPONSE, decodeHeader, type SettleResponse } from "../packages/sdk/src/protocol.ts";
 import { erc20Abi } from "../packages/sdk/src/abi.ts";
+import os from "node:os";
+
+const STATE = path.join(os.tmpdir(), `tender-mcp-test-${process.pid}.json`);
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const RPC = "http://127.0.0.1:8545";
@@ -165,6 +168,7 @@ async function main() {
       TENDER_MAX_PER_CALL_USD: "0.10",
       TENDER_DAILY_LIMIT_USD: "0.12",
       TENDER_ALLOW_HTTP: "true",
+      TENDER_STATE_FILE: STATE,
     } as any);
     const { server } = createTenderMcp(cfgM);
     const [ct, st] = InMemoryTransport.createLinkedPair();
@@ -219,6 +223,20 @@ async function main() {
     check("2nd $0.05 payment fits under the $0.12 daily limit", !daily.err && daily.s.paid === true, daily.text.split("\n")[1]);
     const daily2 = await T("pay", { url: URL_ });
     check("3rd payment blocked by $0.12 daily limit", daily2.err && daily2.text.includes("today's limit"), daily2.text);
+    // a restart (a fresh server process) must not hand out a new day's budget
+    const { server: s3 } = createTenderMcp(configFromEnv({
+      TENDER_PRIVATE_KEY: agentKey, TENDER_PAY_WITH: meme, TENDER_CHAIN_ID: "31337", TENDER_RPC_URL: RPC, TENDER_FACILITATOR: FAC,
+      TENDER_USDG: usdg, TENDER_PERMIT2: permit2, TENDER_MAX_PER_CALL_USD: "0.10", TENDER_DAILY_LIMIT_USD: "0.12",
+      TENDER_ALLOW_HTTP: "true", TENDER_STATE_FILE: STATE,
+    } as any));
+    const [ct3, st3] = InMemoryTransport.createLinkedPair();
+    await s3.connect(st3);
+    const client3 = new Client({ name: "after-restart", version: "1" });
+    await client3.connect(ct3);
+    const r3: any = await client3.callTool({ name: "pay", arguments: { url: URL_ } });
+    const r3t = r3.content.map((c: any) => c.text).join(" ");
+    check("after a restart the daily limit still holds", !!r3.isError && r3t.includes("today's limit"), r3t);
+    check("spending is saved to disk", JSON.parse(fs.readFileSync(STATE, "utf8"))[`31337:${agent.address.toLowerCase()}`]?.spent === "100000");
     check("merchant has exactly $0.10, nothing extra paid", (await bal(usdg, merchant)) === 100_000n);
     const bad = await T("pay", { url: "ftp://example.com" });
     check("non-http URL refused", bad.err);

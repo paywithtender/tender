@@ -154,6 +154,7 @@ async function main() {
     const { server } = createTenderMcp(configFromEnv({
       TENDER_PRIVATE_KEY: agentKey, TENDER_PAY_WITH: meme, TENDER_CHAIN_ID: "31337", TENDER_RPC_URL: RPC,
       TENDER_FACILITATOR: FAC, TENDER_USDG: usdg, TENDER_PERMIT2: permit2, TENDER_ALLOW_HTTP: "true",
+      TENDER_STATE_FILE: "none",
     } as any));
     const [ct, st] = InMemoryTransport.createLinkedPair();
     await server.connect(st);

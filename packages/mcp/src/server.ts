@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import {
@@ -30,7 +33,7 @@ import {
   type SwapQuote,
 } from "@paywithtender/sdk";
 
-export const VERSION = "0.1.1";
+export const VERSION = "0.1.2";
 
 export interface TenderMcpConfig {
   /** Agent wallet key. Without it, only the read-only tools work. */
@@ -46,6 +49,8 @@ export interface TenderMcpConfig {
   maxPerCall: bigint;
   maxFeePerCall: bigint;
   dailyLimit: bigint;
+  /** File that keeps today's spending per wallet, so restarts don't reset the daily limit. Unset = memory only. */
+  stateFile?: string;
   /** Allow paying plain-http URLs (local testing only). */
   allowHttp: boolean;
   explorer?: string;
@@ -78,6 +83,7 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): TenderMcpCo
     maxFeePerCall: usdUnits(env.TENDER_MAX_FEE_USD, "0.10"),
     dailyLimit: usdUnits(env.TENDER_DAILY_LIMIT_USD, "10"),
     allowHttp: env.TENDER_ALLOW_HTTP === "true",
+    stateFile: env.TENDER_STATE_FILE === "none" ? undefined : env.TENDER_STATE_FILE || path.join(os.homedir(), ".tender", "spend.json"),
     explorer: chainId === ROBINHOOD.chainId ? "https://robinhoodchain.blockscout.com" : undefined,
   };
 }
@@ -111,14 +117,45 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
   const account: PrivateKeyAccount | undefined = cfg.privateKey ? privateKeyToAccount(cfg.privateKey) : undefined;
   const wallet = account ? createWalletClient({ chain, transport: http(cfg.rpcUrl), account }) : undefined;
 
-  // Spending this process has done in the current UTC day.
-  let day = new Date().toISOString().slice(0, 10);
-  let spentToday = 0n;
-  const spent = () => {
-    const d = new Date().toISOString().slice(0, 10);
-    if (d !== day) [day, spentToday] = [d, 0n];
-    return spentToday;
+  // Today's spending, per wallet and UTC day. Kept in cfg.stateFile so restarting the server (or the AI app)
+  // can't hand the agent a fresh day's budget, and several server processes share one running total.
+  const today = () => new Date().toISOString().slice(0, 10);
+  const ledgerKey = account ? `${cfg.chainId}:${account.address.toLowerCase()}` : "";
+  let memDay = today();
+  let memSpent = 0n;
+  function readLedger(): Record<string, { day: string; spent: string }> {
+    try {
+      return JSON.parse(fs.readFileSync(cfg.stateFile!, "utf8"));
+    } catch (e: any) {
+      if (e.code === "ENOENT") return {};
+      throw new Error(`can't read the spending record at ${cfg.stateFile}: ${e.message}`);
+    }
+  }
+  const spent = (): bigint => {
+    const d = today();
+    if (!cfg.stateFile) {
+      if (d !== memDay) [memDay, memSpent] = [d, 0n];
+      return memSpent;
+    }
+    const e = readLedger()[ledgerKey];
+    return e && e.day === d ? BigInt(e.spent) : 0n;
   };
+  function addSpent(delta: bigint) {
+    const d = today();
+    if (!cfg.stateFile) {
+      if (d !== memDay) [memDay, memSpent] = [d, 0n];
+      memSpent = memSpent + delta < 0n ? 0n : memSpent + delta;
+      return;
+    }
+    const all = readLedger();
+    const cur = all[ledgerKey]?.day === d ? BigInt(all[ledgerKey].spent) : 0n;
+    const next = cur + delta < 0n ? 0n : cur + delta;
+    all[ledgerKey] = { day: d, spent: next.toString() };
+    fs.mkdirSync(path.dirname(cfg.stateFile), { recursive: true, mode: 0o700 });
+    const tmp = `${cfg.stateFile}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(all, null, 2), { mode: 0o600 });
+    fs.renameSync(tmp, cfg.stateFile);
+  }
 
   const tokenCache = new Map<string, { symbol: string; name: string; decimals: number }>();
   async function token(addr: Address) {
@@ -346,8 +383,14 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
       if (!opt) return fail("This API doesn't accept Tender payments on this chain.");
       const price = BigInt(opt.amount);
       if (price > cap) return fail(`The API wants ${money(price)}, above this agent's limit of ${money(cap)} per call. Nothing was paid.`);
-      if (spent() + price > cfg.dailyLimit) {
-        return fail(`Paying ${money(price)} would pass today's limit (${money(spent())} of ${money(cfg.dailyLimit)} used). Nothing was paid.`);
+      let used: bigint;
+      try {
+        used = spent();
+      } catch (e: any) {
+        return fail(`Couldn't check today's spending: ${e.message}. Nothing was paid.`);
+      }
+      if (used + price > cfg.dailyLimit) {
+        return fail(`Paying ${money(price)} would pass today's limit (${money(used)} of ${money(cfg.dailyLimit)} used). Nothing was paid.`);
       }
 
       const tokenIn = payWith ?? cfg.usdg;
@@ -377,10 +420,21 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
       }
       const h = new Headers(init.headers);
       h.set(HEADER_PAYMENT, encodeHeader(payload));
-      const paid = await fetch(target, { ...init, headers: h });
+      // count the payment before sending it, so parallel calls and crashes can't overspend; give it back only if it clearly failed
+      try {
+        addSpent(price);
+      } catch (e: any) {
+        return fail(`Couldn't record today's spending: ${e.message}. Nothing was paid.`);
+      }
+      let paid: Response;
+      try {
+        paid = await fetch(target, { ...init, headers: h });
+      } catch (e: any) {
+        return fail(`The API couldn't be reached after signing (${e.message}). The payment may or may not have settled, so ${money(price)} stays counted toward today's limit.`);
+      }
       const settleHeader = paid.headers.get(HEADER_RESPONSE);
       const settle = settleHeader ? decodeHeader<SettleResponse>(settleHeader) : null;
-      if (settle?.success) spentToday = spent() + price;
+      if ((settle && !settle.success) || (!settle && paid.status === 402)) addSpent(-price);
       return respond(paid, settle ? { ...settle, price, tokenIn } : null);
     }
   );

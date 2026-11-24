@@ -9,12 +9,12 @@
     "source": "github",
     "subfolder": "packages/mcp"
   },
-  "version": "0.1.1",
+  "version": "0.1.2",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@paywithtender/mcp",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "transport": { "type": "stdio" },
       "environmentVariables": [
         { "name": "TENDER_PRIVATE_KEY", "description": "Private key of a dedicated agent wallet. Leave out to run read-only.", "isRequired": false, "isSecret": true, "format": "string" },

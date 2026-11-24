@@ -56,7 +56,8 @@ It costs $0.01 plus gas, in whatever token you set as `TENDER_PAY_WITH`.
 | `TENDER_PAY_WITH` | USDG | Token to pay with. Any token with a Uniswap route to USDG works. |
 | `TENDER_MAX_PER_CALL_USD` | `1` | Refuse any API priced above this. |
 | `TENDER_MAX_FEE_USD` | `0.10` | Refuse if Tender's fee plus gas is above this. |
-| `TENDER_DAILY_LIMIT_USD` | `10` | Total the agent may spend per UTC day (resets when the server restarts). |
+| `TENDER_DAILY_LIMIT_USD` | `10` | Total the agent may spend per UTC day. The running total is saved to disk, so restarting the server or the AI app doesn't reset it. |
+| `TENDER_STATE_FILE` | `~/.tender/spend.json` | Where today's spending is kept, per wallet. Set to `none` to keep it in memory only (resets on restart). |
 | `TENDER_RPC_URL` | Robinhood Chain public RPC | |
 | `TENDER_FACILITATOR` | `https://facilitator.paywithtender.com` | |
 
