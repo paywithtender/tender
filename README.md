@@ -1,5 +1,7 @@
 # Tender
 
+[![Tender MCP server](https://glama.ai/mcp/servers/paywithtender/tender/badges/score.svg)](https://glama.ai/mcp/servers/paywithtender/tender)
+
 **Every coin on Robinhood is money.** Tender is an x402 payment rail for Robinhood Chain that lets AI agents pay any x402 endpoint with any liquid token. The merchant always receives exact USDG.
 
 - **Every payment covers its own gas.** The facilitator prices the gas it will spend to settle (gas units × gas price × ETH price, +20%) into each quote, and the agent signs for it. The contract caps the gas part at `maxGasFee` (1 USDG by default).

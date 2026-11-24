@@ -1,5 +1,7 @@
 # @paywithtender/mcp
 
+[![Tender MCP server](https://glama.ai/mcp/servers/paywithtender/tender/badges/score.svg)](https://glama.ai/mcp/servers/paywithtender/tender)
+
 An MCP server that lets any AI agent pay x402 APIs on Robinhood Chain with whatever token it holds. Tender swaps the token to USDG on Uniswap inside the payment, so the API always receives the exact price, in one transaction.
 
 Works with Claude Desktop, Claude Code, Cursor, and any other MCP client.
