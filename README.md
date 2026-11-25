@@ -1,6 +1,6 @@
 # Tender
 
-[![Tender MCP server](https://glama.ai/mcp/servers/paywithtender/tender/badges/score.svg)](https://glama.ai/mcp/servers/paywithtender/tender)
+[![Tender MCP server](https://glama.ai/mcp/servers/paywithtender/tender/badges/score.svg)](https://glama.ai/mcp/servers/paywithtender/tender) [![Tender MCP on mcprush](https://mcprush.com/badge/paywithtender-tender-mcp/compact.svg)](https://mcprush.com/to/paywithtender-tender-mcp?ref=badge)
 
 **Every coin on Robinhood is money.** Tender is an x402 payment rail for Robinhood Chain that lets AI agents pay any x402 endpoint with any liquid token. The merchant always receives exact USDG.
 
