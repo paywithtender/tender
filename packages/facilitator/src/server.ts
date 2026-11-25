@@ -206,7 +206,11 @@ export function createApp(cfg: Config) {
     }
   });
 
-  app.get("/feed", (_req, res) => res.json({ totals: store.data.totals, recent: store.data.feed.slice(0, 50) }));
+  app.get("/feed", (req, res) => {
+    // ?limit=n (1-500) lets the ledger page load the full history; default stays 50.
+    const n = Math.min(500, Math.max(1, Number(req.query.limit) || 50));
+    res.json({ totals: store.data.totals, recent: store.data.feed.slice(0, n) });
+  });
   if (process.env.PAID_API !== "false") mountPaidApi(app, cfg, adapter);
   mountBadge(app, cfg, adapter);
 

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tender ledger: every payment, on-chain</title>
+<meta name="description" content="Every payment settled through Tender on Robinhood Chain, with the coin paid, the USDG the merchant received, and a link to the transaction.">
+<meta property="og:title" content="Tender ledger">
+<meta property="og:description" content="Every Tender payment on Robinhood Chain, linked on-chain.">
+<meta property="og:url" content="https://paywithtender.com/stats">
+<link rel="canonical" href="https://paywithtender.com/stats">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/tender.css">
+<style>
+  .head { padding-block: 72px 40px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: end; }
+  .head h1 { margin: 0; font-size: clamp(38px, 4.6vw, 54px); line-height: 1.05; font-weight: 600; letter-spacing: -0.035em; }
+  .head .lede { margin: 16px 0 0; font-size: 18px; color: var(--slate); max-width: 34em; }
+  .live { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .live i { width: 8px; height: 8px; border-radius: 50%; background: #2FC69A; box-shadow: 0 0 0 3px var(--jade-soft); }
+  .live.off i { background: var(--warn); box-shadow: 0 0 0 3px var(--warn-soft); }
+
+  .totals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .totals div { padding: 22px 24px; border-left: 1px solid var(--line); }
+  .totals div:first-child { border-left: 0; }
+  .totals dt { font-size: 14px; color: var(--muted); }
+  .totals dd { margin: 6px 0 0; font: 500 30px/1.1 var(--sans); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+
+  .first { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; padding: 18px 22px; border-radius: 14px; background: var(--jade-soft); color: var(--ink); }
+  .first p { margin: 0; font-size: 15px; max-width: 46em; }
+
+  .grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 48px; padding-block: 56px 96px; align-items: start; }
+  .grid h2 { font-size: 20px; letter-spacing: -0.02em; }
+  .grid .note { margin: 6px 0 0; font-size: 14px; color: var(--muted); }
+
+  .coins { list-style: none; margin: 18px 0 0; padding: 0; }
+  .coins li { padding: 12px 0; border-top: 1px solid var(--line); }
+  .coins .row { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
+  .coins .row b { font-weight: 500; }
+  .coins .row span { color: var(--muted); font: 400 13px/1.6 var(--mono); }
+  .bar { margin-top: 8px; height: 6px; border-radius: 3px; background: var(--mist); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--jade); border-radius: 3px; }
+
+  .tbl { margin-top: 18px; overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th { text-align: left; font-weight: 500; color: var(--muted); padding: 12px 16px; border-bottom: 1px solid var(--line); background: #FBFBFC; white-space: nowrap; }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .mono { font-family: var(--mono); font-size: 13px; }
+  td a { color: var(--ink); text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+  td a:hover { text-decoration-color: var(--ink); }
+  .tag { display: inline-block; font-size: 12px; color: var(--slate); background: var(--mist); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; }
+  .addr { color: var(--slate); }
+  .empty td { color: var(--muted); white-space: normal; }
+
+  @media (max-width: 960px) {
+    .grid { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+    .totals { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .totals div:nth-child(3) { border-left: 0; }
+    .totals div:nth-child(n+3) { border-top: 1px solid var(--line); }
+  }
+  @media (max-width: 560px) {
+    .head { grid-template-columns: minmax(0, 1fr); padding-top: 48px; }
+    .totals dd { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<nav class="top" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Tender home"><span class="glyph" aria-hidden="true">t<i></i></span>Tender</a>
+    <ul>
+      <li><a href="/try">Try it</a></li>
+      <li><a href="/stats" aria-current="page">Ledger</a></li>
+      <li><a href="/docs">Docs</a></li>
+      <li><a href="/check">Check a coin</a></li>
+      <li><a href="https://github.com/paywithtender/tender">GitHub</a></li>
+    </ul>
+    <a class="btn btn-dark btn-sm" href="/docs">Start building</a>
+  </div>
+</nav>
+
+<main class="wrap">
+  <header class="head">
+    <div>
+      <h1>Every payment, on&#8209;chain.</h1>
+      <p class="lede">Each payment settled through Tender, with the coin the agent paid in and the USDG the merchant received. Every row links to its transaction on Robinhood Chain.</p>
+    </div>
+    <span class="live" id="live"><i></i><span id="live-text">Loading</span></span>
+  </header>
+
+  <dl class="totals">
+    <div><dt>Payments settled</dt><dd id="t-count">–</dd></div>
+    <div><dt>Paid to merchants</dt><dd id="t-usdg">–</dd></div>
+    <div><dt>Coins paid with</dt><dd id="t-coins">–</dd></div>
+    <div><dt>Merchants paid</dt><dd id="t-merchants">–</dd></div>
+  </dl>
+
+  <div class="first hidden" id="first">
+    <p id="first-text"></p>
+    <a class="btn btn-jade btn-sm" href="/try">Make a payment</a>
+  </div>
+
+  <div class="grid">
+    <section aria-labelledby="coins-h">
+      <h2 id="coins-h">Coins paid with</h2>
+      <p class="note">Merchants received USDG every time.</p>
+      <ul class="coins" id="coins"></ul>
+    </section>
+
+    <section aria-labelledby="ledger-h">
+      <h2 id="ledger-h">Ledger</h2>
+      <p class="note" id="ledger-note">Newest first.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Paid in</th><th class="num">Amount</th><th class="num">Merchant got</th><th>Payer</th><th>Transaction</th><th class="num">When</th></tr></thead>
+          <tbody id="ledger"><tr class="empty"><td colspan="6">Loading payments…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="Tender home"><span class="glyph" aria-hidden="true">t<i></i></span>Tender</a>
+    <ul>
+      <li><a href="/try">Try it</a></li>
+      <li><a href="/stats">Ledger</a></li>
+      <li><a href="/docs">Docs</a></li>
+      <li><a href="/check">Check a coin</a></li>
+      <li><a href="https://github.com/paywithtender/tender">GitHub</a></li>
+      <li><a href="https://x.com/tenderpays">X</a></li>
+    </ul>
+    <small>Payments are real, final on-chain transactions on Robinhood Chain. Tender is an independent project and is not affiliated with Robinhood Markets, Inc.</small>
+  </div>
+</footer>
+
+<script>
+const CONFIG = {
+  facilitator: "https://facilitator.paywithtender.com",
+  facilitatorFallback: "https://paywithtender-facilitator.fly.dev",
+  explorer: "https://robinhoodchain.blockscout.com/",
+  settlement: "0x7A93fE8C092b1929d6FFe5085b3619B9071b97C4",
+};
+/* Tender's own wallets, labeled so test payments are never passed off as outside usage. */
+const OWN = {
+  "0x6e640f490a451e2b05c5af586ff8fe78a4f04ba5": "Tender test agent",
+  "0x825048c08556e5b2a9bdaf28200b13c2a02caf99": "Tender treasury",
+  "0x6b9897f462edaf27b6f90de6b595eed8b776a725": "Tender deployer",
+};
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const short = (a) => a.slice(0, 6) + "…" + a.slice(-4);
+const fmtAmt = (raw, dec) => (Number(raw) / 10 ** (dec ?? 18)).toLocaleString("en-US", { maximumSignificantDigits: 5 });
+const usd = (raw) => "$" + (Number(raw) / 1e6).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const ago = (ms) => { const s = Math.max(1, Math.round((Date.now() - ms) / 1000)); return s < 60 ? `${s}s ago` : s < 3600 ? `${Math.round(s / 60)}m ago` : s < 86400 ? `${Math.round(s / 3600)}h ago` : `${Math.round(s / 86400)}d ago`; };
+const who = (a) => { const l = OWN[String(a).toLowerCase()]; return l ? `<span class="tag">${l}</span>` : `<a class="mono addr" href="${CONFIG.explorer}address/${esc(a)}">${short(esc(a))}</a>`; };
+
+let base = CONFIG.facilitator;
+async function getFeed() {
+  const url = (b) => b + "/feed?limit=500";
+  try { const r = await fetch(url(base)); if (!r.ok) throw new Error(r.status); return await r.json(); }
+  catch (e) { if (base === CONFIG.facilitatorFallback) throw e; base = CONFIG.facilitatorFallback; return (await fetch(url(base))).json(); }
+}
+
+function render({ totals, recent }) {
+  const rows = recent || [];
+  const complete = rows.length >= Number(totals.payments);
+
+  $("t-count").textContent = Number(totals.payments).toLocaleString("en-US");
+  $("t-usdg").textContent = usd(totals.usdg);
+
+  // Coins: count and USDG settled per token.
+  const coins = new Map();
+  for (const e of rows) {
+    const k = (e.token || e.symbol).toLowerCase();
+    const c = coins.get(k) || { symbol: e.symbol || "USDG", token: e.token, n: 0, usdg: 0n };
+    c.n++; c.usdg += BigInt(e.usdg || 0);
+    coins.set(k, c);
+  }
+  const list = [...coins.values()].sort((a, b) => b.n - a.n);
+  const max = Math.max(1, ...list.map((c) => c.n));
+  $("t-coins").textContent = list.length;
+  $("coins").innerHTML = list.map((c) => `
+    <li>
+      <div class="row"><b><a href="${CONFIG.explorer}token/${esc(c.token)}">${esc(c.symbol)}</a></b><span>${c.n} payment${c.n === 1 ? "" : "s"} · ${usd(c.usdg)}</span></div>
+      <div class="bar"><i style="width:${(c.n / max) * 100}%"></i></div>
+    </li>`).join("") || `<li class="note">No payments yet.</li>`;
+
+  $("t-merchants").textContent = new Set(rows.map((e) => e.merchant.toLowerCase())).size;
+
+  // Be upfront when every payment so far is Tender testing itself.
+  const outside = rows.filter((e) => !OWN[e.payer.toLowerCase()]).length;
+  $("first").classList.toggle("hidden", !complete || outside > 0);
+  if (complete && outside === 0) {
+    $("first-text").textContent = rows.length
+      ? "Every payment so far is Tender's own end-to-end testing, labeled below. The first payment from outside could be yours: $0.01, from your own wallet, in any coin."
+      : "No payments yet. The first one could be yours: $0.01, from your own wallet, in any coin.";
+  }
+
+  $("ledger-note").textContent = complete ? "Newest first." : `Showing the latest ${rows.length} of ${Number(totals.payments).toLocaleString("en-US")}. The full history is on Blockscout.`;
+  $("ledger").innerHTML = rows.length ? rows.map((e) => `
+    <tr>
+      <td>${esc(e.symbol || "USDG")}</td>
+      <td class="num mono">${fmtAmt(e.amountIn, e.decimals)}</td>
+      <td class="num mono">${usd(e.usdg)}</td>
+      <td>${who(e.payer)}</td>
+      <td class="mono"><a href="${CONFIG.explorer}tx/${esc(e.tx)}">${short(esc(e.tx))}</a></td>
+      <td class="num" data-time="${e.time}" title="${new Date(e.time).toISOString()}">${ago(e.time)}</td>
+    </tr>`).join("") : `<tr class="empty"><td colspan="6">No payments yet.</td></tr>`;
+
+  $("live").classList.remove("off");
+  $("live-text").textContent = "Live";
+}
+
+async function load() { render(await getFeed()); }
+load().then(() => setInterval(() => load().catch(() => {}), 15000)).catch(() => {
+  $("live").classList.add("off");
+  $("live-text").textContent = "Offline";
+  $("ledger").innerHTML = `<tr class="empty"><td colspan="6">The ledger can't load right now. Every payment is also on <a href="${CONFIG.explorer}address/${CONFIG.settlement}">Blockscout</a>.</td></tr>`;
+});
+setInterval(() => document.querySelectorAll("[data-time]").forEach((td) => (td.textContent = ago(+td.dataset.time))), 10000);
+</script>
+</body>
+</html>
