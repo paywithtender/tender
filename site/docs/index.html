@@ -192,7 +192,7 @@ app.get(<span class="s">"/premium"</span>, (req, res) =&gt; res.json({ data: <sp
 
 <span class="k">const</span> res = <span class="k">await</span> pay(<span class="s">"https://api.example.com/premium"</span>);</pre></div>
       <h3>First payment with a new token</h3>
-      <p>Each token needs one Permit2 approval before its first payment. The MCP server and <code>TenderSwapClient</code> send it for you. With the Tender SDK, call <code>ensurePermit2Approval</code> once. If the wallet has no ETH for gas, Tender covers that one approval.</p>
+      <p>Each token needs a Permit2 approval before its first payment. The MCP server sends a capped one for you: enough for 7 days at your daily limit (change it with <code>TENDER_APPROVAL_DAYS</code>), renewed when it runs low. <code>TenderSwapClient</code> approves once. With the Tender SDK, call <code>ensurePermit2Approval</code>, and pass <code>amount</code> to cap it. If the wallet has no ETH for gas, Tender covers its first approval.</p>
       <div class="code"><header>agent.ts<button data-copy>Copy</button></header><pre><span class="k">import</span> { ensurePermit2Approval, ROBINHOOD } <span class="k">from</span> <span class="s">"@paywithtender/sdk"</span>;
 
 <span class="k">await</span> ensurePermit2Approval({ wallet, publicClient, token, permit2: ROBINHOOD.permit2, facilitator: <span class="s">"https://facilitator.paywithtender.com"</span> });</pre></div>

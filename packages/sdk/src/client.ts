@@ -162,8 +162,15 @@ async function signSwap(opts: TenderClientOptions, req: PaymentRequirements, req
 }
 
 /**
- * One-time setup per token: approve Permit2. If the wallet has no ETH for gas,
- * asks the facilitator to sponsor a tiny top-up first.
+ * Approve Permit2 to move `token` for this wallet.
+ *
+ * Default (no `amount`): one-time unlimited approval, made only if there is none yet.
+ * Capped (`amount` set): approves `amount` (at least `needed`), and approves again only
+ * when the remaining allowance can't cover `needed`. Payments still need a fresh signature
+ * each time; the cap limits what Permit2 could ever move without a new on-chain approval.
+ *
+ * If the wallet has no ETH for gas, asks the facilitator to sponsor a tiny top-up first.
+ * The facilitator sponsors a wallet's first approval only.
  */
 export async function ensurePermit2Approval(params: {
   wallet: WalletClient;
@@ -171,13 +178,22 @@ export async function ensurePermit2Approval(params: {
   token: Address;
   permit2: Address;
   facilitator?: string;
+  /** Approve this many token units instead of unlimited. */
+  amount?: bigint;
+  /** Token units the next payment needs. With `amount`, re-approves when the allowance is below this. */
+  needed?: bigint;
 }) {
-  const { wallet, publicClient: pc, token, permit2, facilitator } = params;
+  const { wallet, publicClient: pc, token, permit2, facilitator, amount } = params;
+  const needed = params.needed ?? 1n;
   const owner = wallet.account!.address;
   const allowance = await pc.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [owner, permit2] });
-  if (allowance > 0n) return null;
+  if (amount === undefined ? allowance > 0n : allowance >= needed) return null;
+  const approveAmount = amount === undefined ? maxUint256 : amount > needed ? amount : needed;
 
   const eth = await pc.getBalance({ address: owner });
+  if (eth === 0n && allowance > 0n) {
+    throw new Error("the capped token approval is used up and this wallet has no ETH for gas to renew it; send it a little ETH on Robinhood Chain");
+  }
   if (eth === 0n && facilitator) {
     const r = (await (
       await fetch(`${facilitator}/sponsor`, {
@@ -193,7 +209,7 @@ export async function ensurePermit2Approval(params: {
     address: token,
     abi: erc20Abi,
     functionName: "approve",
-    args: [permit2, maxUint256],
+    args: [permit2, approveAmount],
     account: wallet.account!,
     chain: wallet.chain,
   });

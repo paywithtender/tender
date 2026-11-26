@@ -9,18 +9,47 @@
     "source": "github",
     "subfolder": "packages/mcp"
   },
-  "version": "0.1.2",
+  "version": "0.1.3",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "@paywithtender/mcp",
-      "version": "0.1.2",
-      "transport": { "type": "stdio" },
+      "version": "0.1.3",
+      "transport": {
+        "type": "stdio"
+      },
       "environmentVariables": [
-        { "name": "TENDER_PRIVATE_KEY", "description": "Private key of a dedicated agent wallet. Leave out to run read-only.", "isRequired": false, "isSecret": true, "format": "string" },
-        { "name": "TENDER_PAY_WITH", "description": "Token address to pay with. Defaults to USDG.", "isRequired": false, "format": "string" },
-        { "name": "TENDER_MAX_PER_CALL_USD", "description": "Refuse any API priced above this, in USD. Default 1.", "isRequired": false, "format": "string" },
-        { "name": "TENDER_DAILY_LIMIT_USD", "description": "Total the agent may spend per UTC day, in USD. Default 10.", "isRequired": false, "format": "string" }
+        {
+          "name": "TENDER_PRIVATE_KEY",
+          "description": "Private key of a dedicated agent wallet. Leave out to run read-only.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "TENDER_PAY_WITH",
+          "description": "Token address to pay with. Defaults to USDG.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "TENDER_MAX_PER_CALL_USD",
+          "description": "Refuse any API priced above this, in USD. Default 1.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "TENDER_DAILY_LIMIT_USD",
+          "description": "Total the agent may spend per UTC day, in USD. Default 10.",
+          "isRequired": false,
+          "format": "string"
+        },
+        {
+          "name": "TENDER_APPROVAL_DAYS",
+          "description": "Token approval to Permit2, in days of the daily limit. Default 7. Set to 'unlimited' for a one-time unlimited approval.",
+          "isRequired": false,
+          "format": "string"
+        }
       ]
     }
   ]

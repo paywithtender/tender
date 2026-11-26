@@ -208,14 +208,16 @@ async function main() {
     const q1 = await T("quote", { usd: "0.05" });
     check("quote in default token", !q1.err && q1.s.symbol === "RHDOGE", q1.text);
     const w1 = await T("wallet");
-    check("wallet shows address, balance and limits", w1.text.includes(agent.address) && w1.text.includes("RHDOGE: 1,000") && w1.text.includes("one-time approval"), w1.text.replace(/\n/g, " | "));
+    check("wallet shows address, balance and limits", w1.text.includes(agent.address) && w1.text.includes("RHDOGE: 1,000") && w1.text.includes("approval happens on first payment"), w1.text.replace(/\n/g, " | "));
 
     console.log("\n4. pay");
     const f = await T("pay", { url: "http://127.0.0.1:4022/free" });
     check("free endpoint is just fetched", !f.err && f.s.paid === undefined && f.text.includes("HTTP 200"));
     const p1 = await T("pay", { url: URL_ });
     check("paid $0.05 in memecoin, got the data", !p1.err && p1.s.paid === true && p1.text.includes("buy low, sell high"), p1.text.split("\n").slice(0, 2).join(" | "));
-    check("gas was sponsored, Permit2 approved on first payment", (await pc.readContract({ address: meme, abi: erc20Abi, functionName: "allowance", args: [agent.address, permit2] })) > 0n);
+    const allow1 = await pc.readContract({ address: meme, abi: erc20Abi, functionName: "allowance", args: [agent.address, permit2] });
+    check("gas was sponsored, Permit2 approved on first payment", allow1 > 0n);
+    check("Permit2 approval is capped, not unlimited", allow1 < 2n ** 255n, String(allow1));
     check("merchant got exactly $0.05 USDG", (await bal(usdg, merchant)) === 50_000n);
     const capped = await T("pay", { url: URL_, max_usd: "0.01" });
     check("per-call max_usd refuses", capped.err && capped.text.includes("Nothing was paid"), capped.text);

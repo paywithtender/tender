@@ -59,6 +59,7 @@ It costs $0.01 plus gas, in whatever token you set as `TENDER_PAY_WITH`.
 | `TENDER_MAX_PER_CALL_USD` | `1` | Refuse any API priced above this. |
 | `TENDER_MAX_FEE_USD` | `0.10` | Refuse if Tender's fee plus gas is above this. |
 | `TENDER_DAILY_LIMIT_USD` | `10` | Total the agent may spend per UTC day. The running total is saved to disk, so restarting the server or the AI app doesn't reset it. |
+| `TENDER_APPROVAL_DAYS` | `7` | The agent approves only enough of its token for this many days at the daily limit, and renews the approval when it runs low. It never grants an unlimited allowance unless you set this to `unlimited`. A wallet without ETH gets its first approval sponsored; renewals need a little ETH for gas. |
 | `TENDER_STATE_FILE` | `~/.tender/spend.json` | Where today's spending is kept, per wallet. Set to `none` to keep it in memory only (resets on restart). |
 | `TENDER_RPC_URL` | Robinhood Chain public RPC | |
 | `TENDER_FACILITATOR` | `https://facilitator.paywithtender.com` | |
@@ -69,7 +70,7 @@ It costs $0.01 plus gas, in whatever token you set as `TENDER_PAY_WITH`.
 - Paying in any other token: 0.5% + gas
 - Paying in $TENDER: gas only
 
-The first payment with a new token needs a one-time Permit2 approval. If the agent wallet has no ETH, Tender covers the gas for it.
+The first payment with a new token approves Permit2 for a capped amount: enough for `TENDER_APPROVAL_DAYS` days at your daily limit, never unlimited. If the agent wallet has no ETH, Tender covers the gas for that first approval. When the approval runs low the agent renews it, which needs a little ETH.
 
 ## Links
 

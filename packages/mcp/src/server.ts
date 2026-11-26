@@ -33,7 +33,7 @@ import {
   type SwapQuote,
 } from "@paywithtender/sdk";
 
-export const VERSION = "0.1.2";
+export const VERSION = "0.1.3";
 
 export interface TenderMcpConfig {
   /** Agent wallet key. Without it, only the read-only tools work. */
@@ -54,6 +54,11 @@ export interface TenderMcpConfig {
   /** Allow paying plain-http URLs (local testing only). */
   allowHttp: boolean;
   explorer?: string;
+  /**
+   * Token approval to Permit2, in days of `dailyLimit`. The agent approves only enough of its
+   * token for this many days of maximum spending, and renews when it runs low. 0 = unlimited.
+   */
+  approvalDays?: number;
 }
 
 const USD = 1_000_000n;
@@ -63,6 +68,13 @@ function usdUnits(v: string | undefined, fallback: string): bigint {
   if (!/^\d+(\.\d+)?$/.test(s)) throw new Error(`not a dollar amount: ${v}`);
   const [w, f = ""] = s.split(".");
   return BigInt(w) * USD + BigInt((f + "000000").slice(0, 6));
+}
+
+function approvalDaysFromEnv(v: string | undefined): number {
+  const s = (v ?? "7").trim().toLowerCase();
+  if (s === "unlimited" || s === "0") return 0;
+  if (!/^\d+$/.test(s) || Number(s) > 365) throw new Error("TENDER_APPROVAL_DAYS must be a whole number of days (1-365), or 'unlimited'");
+  return Number(s);
 }
 
 export function configFromEnv(env: NodeJS.ProcessEnv = process.env): TenderMcpConfig {
@@ -82,6 +94,7 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): TenderMcpCo
     maxPerCall: usdUnits(env.TENDER_MAX_PER_CALL_USD, "1"),
     maxFeePerCall: usdUnits(env.TENDER_MAX_FEE_USD, "0.10"),
     dailyLimit: usdUnits(env.TENDER_DAILY_LIMIT_USD, "10"),
+    approvalDays: approvalDaysFromEnv(env.TENDER_APPROVAL_DAYS),
     allowHttp: env.TENDER_ALLOW_HTTP === "true",
     stateFile: env.TENDER_STATE_FILE === "none" ? undefined : env.TENDER_STATE_FILE || path.join(os.homedir(), ".tender", "spend.json"),
     explorer: chainId === ROBINHOOD.chainId ? "https://robinhoodchain.blockscout.com" : undefined,
@@ -316,7 +329,7 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
           pc.readContract({ address: cfg.payWith, abi: erc20Abi, functionName: "balanceOf", args: [account.address] }),
           pc.readContract({ address: cfg.payWith, abi: erc20Abi, functionName: "allowance", args: [account.address, cfg.permit2] }),
         ]);
-        lines.push(`Pays with ${info.symbol}: ${amt(bal, info.decimals)} (${allowance > 0n ? "ready" : "one-time approval happens on first payment"})`);
+        lines.push(`Pays with ${info.symbol}: ${amt(bal, info.decimals)} (${allowance > 0n ? "approved" : "approval happens on first payment"}${(cfg.approvalDays ?? 7) === 0 ? ", unlimited" : `, capped at ${cfg.approvalDays ?? 7} days of the daily limit`})`);
         Object.assign(structured, { payWith: info.symbol, payWithBalance: formatUnits(bal, info.decimals) });
       } else {
         lines.push("Pays with: USDG");
@@ -395,18 +408,8 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
 
       const tokenIn = payWith ?? cfg.usdg;
       const extra = (opt.extra ?? {}) as { facilitator?: string; permit2?: Address };
-      try {
-        await ensurePermit2Approval({
-          wallet,
-          publicClient: pc,
-          token: tokenIn,
-          permit2: extra.permit2 ?? cfg.permit2,
-          facilitator: extra.facilitator ?? cfg.facilitator,
-        });
-      } catch (e: any) {
-        return fail(`One-time token approval failed: ${e.shortMessage ?? e.message}. Nothing was paid.`);
-      }
 
+      // Sign first (no allowance needed to sign), so the approval can be sized from the real quote.
       let payload;
       try {
         payload = await buildPayment(
@@ -417,6 +420,28 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
         );
       } catch (e: any) {
         return fail(`Couldn't prepare the payment: ${e.message}. Nothing was paid.`);
+      }
+
+      // Permit2 payments need an approval. Capped by default: enough of this token for
+      // TENDER_APPROVAL_DAYS days at the daily limit, never an unlimited allowance.
+      const permit = (payload.payload as { permit?: { permitted: { amount: string } } }).permit;
+      if (permit) {
+        const needed = BigInt(permit.permitted.amount);
+        const days = cfg.approvalDays ?? 7;
+        const amount = days === 0 ? undefined : (needed * cfg.dailyLimit * BigInt(days)) / (price > 0n ? price : 1n);
+        try {
+          await ensurePermit2Approval({
+            wallet,
+            publicClient: pc,
+            token: tokenIn,
+            permit2: extra.permit2 ?? cfg.permit2,
+            facilitator: extra.facilitator ?? cfg.facilitator,
+            amount,
+            needed,
+          });
+        } catch (e: any) {
+          return fail(`Token approval failed: ${e.shortMessage ?? e.message}. Nothing was paid.`);
+        }
       }
       const h = new Headers(init.headers);
       h.set(HEADER_PAYMENT, encodeHeader(payload));
