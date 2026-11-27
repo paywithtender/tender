@@ -218,6 +218,9 @@ async function main() {
     const allow1 = await pc.readContract({ address: meme, abi: erc20Abi, functionName: "allowance", args: [agent.address, permit2] });
     check("gas was sponsored, Permit2 approved on first payment", allow1 > 0n);
     check("Permit2 approval is capped, not unlimited", allow1 < 2n ** 255n, String(allow1));
+    check("payment result includes a receipt line", p1.text.includes("Receipt") && p1.s.receiptUrl !== undefined, p1.text.split("\n").slice(0, 3).join(" | "));
+    const wCap = await T("wallet");
+    check("wallet reports the real capped approval", wCap.text.includes("approved for") && wCap.s.payWithApproval !== "unlimited", wCap.text.replace(/\n/g, " | "));
     check("merchant got exactly $0.05 USDG", (await bal(usdg, merchant)) === 50_000n);
     const capped = await T("pay", { url: URL_, max_usd: "0.01" });
     check("per-call max_usd refuses", capped.err && capped.text.includes("Nothing was paid"), capped.text);

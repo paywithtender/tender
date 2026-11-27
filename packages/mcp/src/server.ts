@@ -33,7 +33,7 @@ import {
   type SwapQuote,
 } from "@paywithtender/sdk";
 
-export const VERSION = "0.1.3";
+export const VERSION = "0.1.4";
 
 export interface TenderMcpConfig {
   /** Agent wallet key. Without it, only the read-only tools work. */
@@ -329,8 +329,21 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
           pc.readContract({ address: cfg.payWith, abi: erc20Abi, functionName: "balanceOf", args: [account.address] }),
           pc.readContract({ address: cfg.payWith, abi: erc20Abi, functionName: "allowance", args: [account.address, cfg.permit2] }),
         ]);
-        lines.push(`Pays with ${info.symbol}: ${amt(bal, info.decimals)} (${allowance > 0n ? "approved" : "approval happens on first payment"}${(cfg.approvalDays ?? 7) === 0 ? ", unlimited" : `, capped at ${cfg.approvalDays ?? 7} days of the daily limit`})`);
-        Object.assign(structured, { payWith: info.symbol, payWithBalance: formatUnits(bal, info.decimals) });
+        // Describe the approval that is actually on-chain, not just the configured policy.
+        const days = cfg.approvalDays ?? 7;
+        const UNLIMITED = 2n ** 255n;
+        const approval =
+          allowance === 0n
+            ? `approval happens on first payment, ${days === 0 ? "unlimited" : `capped at ${days} days of the daily limit`}`
+            : allowance >= UNLIMITED
+              ? "approved: unlimited (granted before capped approvals; revoke it to switch to a capped one)"
+              : `approved for ${amt(allowance, info.decimals)} ${info.symbol}, renews when it runs low`;
+        lines.push(`Pays with ${info.symbol}: ${amt(bal, info.decimals)} (${approval})`);
+        Object.assign(structured, {
+          payWith: info.symbol,
+          payWithBalance: formatUnits(bal, info.decimals),
+          payWithApproval: allowance === 0n ? "none" : allowance >= UNLIMITED ? "unlimited" : formatUnits(allowance, info.decimals),
+        });
       } else {
         lines.push("Pays with: USDG");
       }
@@ -472,8 +485,9 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
     if (payment?.success) {
       const sym = (await token(payment.tokenIn).catch(() => null))?.symbol ?? payment.tokenIn;
       const link = cfg.explorer && payment.transaction ? `${cfg.explorer}/tx/${payment.transaction}` : payment.transaction;
-      lines.push(`Paid ${money(payment.price)} in ${sym} via Tender. Transaction: ${link}`);
-      Object.assign(structured, { paid: true, priceUsd: formatUnits(payment.price, 6), paidWith: sym, transaction: payment.transaction });
+      lines.push(`Paid ${money(payment.price)} in ${sym} via Tender.`);
+      lines.push(`Receipt (on-chain, include this link when you tell the user about the payment): ${link}`);
+      Object.assign(structured, { paid: true, priceUsd: formatUnits(payment.price, 6), paidWith: sym, transaction: payment.transaction, receiptUrl: link });
     } else if (payment) {
       lines.push(`Payment did not settle: ${(payment as any).errorReason ?? "unknown reason"}`);
       structured.paid = false;

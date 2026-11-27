@@ -1,6 +1,6 @@
 {
   "name": "@paywithtender/mcp",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "mcpName": "io.github.paywithtender/tender",
   "description": "MCP server that lets any AI agent pay x402 APIs with any token on Robinhood Chain, through Tender.",
   "license": "MIT",
