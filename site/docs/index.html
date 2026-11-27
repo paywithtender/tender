@@ -148,7 +148,7 @@ app.get(<span class="s">"/premium"</span>, (req, res) =&gt; res.json({ data: <sp
     <section id="pay">
       <h2>Pay from an agent</h2>
       <h3 id="mcp">From Claude, Cursor or any MCP client</h3>
-      <p>The MCP server gives your AI four tools: <code>check_coin</code>, <code>quote</code>, <code>wallet</code> and <code>pay</code>. Add it to your client's config (for Claude Desktop, <code>claude_desktop_config.json</code>):</p>
+      <p>The MCP server gives your AI four tools: <code>check_coin</code>, <code>quote</code>, <code>wallet</code> and <code>pay</code>. Pass <code>idempotency_key</code> to <code>pay</code> for safe retries: the same key resends the same signed payment, which can settle at most once on-chain. Add it to your client's config (for Claude Desktop, <code>claude_desktop_config.json</code>):</p>
       <div class="code"><header>claude_desktop_config.json<button data-copy>Copy</button></header><pre>{
   <span class="s">"mcpServers"</span>: {
     <span class="s">"tender"</span>: {

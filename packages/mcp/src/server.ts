@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -33,7 +34,7 @@ import {
   type SwapQuote,
 } from "@paywithtender/sdk";
 
-export const VERSION = "0.1.4";
+export const VERSION = "0.1.5";
 
 export interface TenderMcpConfig {
   /** Agent wallet key. Without it, only the read-only tools work. */
@@ -169,6 +170,66 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
     fs.writeFileSync(tmp, JSON.stringify(all, null, 2), { mode: 0o600 });
     fs.renameSync(tmp, cfg.stateFile);
   }
+
+  // Purchases made with an idempotency_key. Each keeps the exact signed payment, so a retry resends the
+  // same signature instead of signing a new one. Its nonce is single-use on-chain, so it settles at most once.
+  type Attempt = {
+    req: string; // hash of method + url + body
+    payload: string; // the signed payment header
+    price: string;
+    deadline: number; // unix seconds after which the signature can no longer settle
+    day: string;
+    status: "sent" | "settled";
+    receipt?: string;
+    body?: string;
+    createdAt: number;
+  };
+  const attemptsFile = cfg.stateFile ? path.join(path.dirname(cfg.stateFile), "payments.json") : undefined;
+  const memAttempts: Record<string, Attempt> = {};
+  function readAttempts(): Record<string, Attempt> {
+    if (!attemptsFile) return memAttempts;
+    try {
+      return JSON.parse(fs.readFileSync(attemptsFile, "utf8"));
+    } catch (e: any) {
+      if (e.code === "ENOENT") return {};
+      throw new Error(`can't read the payment record at ${attemptsFile}: ${e.message}`);
+    }
+  }
+  function saveAttempt(key: string, a: Attempt | null) {
+    const all = readAttempts();
+    if (a) all[key] = a;
+    else delete all[key];
+    for (const [k, v] of Object.entries(all)) if (Date.now() - v.createdAt > 7 * 86_400_000) delete all[k];
+    if (!attemptsFile) return;
+    fs.mkdirSync(path.dirname(attemptsFile), { recursive: true, mode: 0o700 });
+    const tmp = `${attemptsFile}.${process.pid}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(all, null, 2), { mode: 0o600 });
+    fs.renameSync(tmp, attemptsFile);
+  }
+  /** Has this signed payment's nonce been used on-chain? (true = it settled) */
+  async function nonceUsed(p: any, permit2: Address): Promise<boolean> {
+    const pl = p.payload ?? {};
+    if (pl.permit) {
+      const nonce = BigInt(pl.permit.nonce);
+      const word = await pc.readContract({
+        address: permit2,
+        abi: [{ type: "function", name: "nonceBitmap", stateMutability: "view", inputs: [{ type: "address" }, { type: "uint256" }], outputs: [{ type: "uint256" }] }],
+        functionName: "nonceBitmap",
+        args: [pl.payer as Address, nonce >> 8n],
+      });
+      return ((word >> (nonce & 255n)) & 1n) === 1n;
+    }
+    if (pl.authorization) {
+      return await pc.readContract({
+        address: p.accepted.asset as Address,
+        abi: [{ type: "function", name: "authorizationState", stateMutability: "view", inputs: [{ type: "address" }, { type: "bytes32" }], outputs: [{ type: "bool" }] }],
+        functionName: "authorizationState",
+        args: [pl.authorization.from as Address, pl.authorization.nonce as Hex],
+      });
+    }
+    throw new Error("unknown payment type");
+  }
+  const deadlineOf = (p: any): number => Number(p.payload?.permit?.deadline ?? p.payload?.authorization?.validBefore ?? 0);
 
   const tokenCache = new Map<string, { symbol: string; name: string; decimals: number }>();
   async function token(addr: Address) {
@@ -369,10 +430,18 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
         headers: z.record(z.string(), z.string()).optional().describe("Extra request headers"),
         pay_with: z.string().optional().describe("Token to pay with for this call (0x…). Omit for the default."),
         max_usd: z.string().optional().describe("Refuse if the API's price is above this many dollars (lower than the configured limit)"),
+        idempotency_key: z
+          .string()
+          .min(1)
+          .max(200)
+          .optional()
+          .describe(
+            "Optional key for this purchase. Retrying with the same key never pays twice: it resends the same signed payment, which can settle at most once on-chain. Use a new key for a new purchase."
+          ),
       },
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
-    async ({ url, method, body, headers, pay_with, max_usd }) => {
+    async ({ url, method, body, headers, pay_with, max_usd, idempotency_key }) => {
       let target: URL;
       try {
         target = new URL(url);
@@ -395,6 +464,45 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
       }
 
       const init: RequestInit = { method: method ?? "GET", headers: headers ?? {}, body };
+
+      // Idempotency: a retry with the same key reuses the original signed payment.
+      const akey = idempotency_key ? `${cfg.chainId}:${account.address.toLowerCase()}:${idempotency_key}` : undefined;
+      const reqId = createHash("sha256").update(`${init.method} ${target.href}\n${body ?? ""}`).digest("hex");
+      if (akey) {
+        let prior: Attempt | undefined;
+        try {
+          prior = readAttempts()[akey];
+        } catch (e: any) {
+          return fail(`Couldn't read past payments: ${e.message}. Nothing was paid.`);
+        }
+        if (prior && prior.req !== reqId) {
+          return fail("This idempotency_key was already used for a different request. Use a new key for a new purchase. Nothing was paid.");
+        }
+        if (prior?.status === "settled") return alreadyPaid(prior);
+        if (prior) {
+          const p = decodeHeader<any>(prior.payload);
+          const permit2 = ((p.accepted?.extra ?? {}) as { permit2?: Address }).permit2 ?? cfg.permit2;
+          let used: boolean;
+          try {
+            used = await nonceUsed(p, permit2);
+          } catch (e: any) {
+            return fail(`Couldn't check whether the earlier attempt settled (${e.shortMessage ?? e.message}). Nothing new was paid; try again shortly.`);
+          }
+          if (used) {
+            const settled: Attempt = { ...prior, status: "settled" };
+            saveAttempt(akey, settled);
+            return alreadyPaid(settled);
+          }
+          if (Date.now() / 1000 < prior.deadline) {
+            // still valid and not settled: resend the same signature (it can settle at most once)
+            return sendPaid(target, init, prior.payload, BigInt(prior.price), akey, prior, permit2);
+          }
+          // expired without settling, so it never can: drop it, give back its count, and sign a fresh payment below
+          if (prior.day === today()) addSpent(-BigInt(prior.price));
+          saveAttempt(akey, null);
+        }
+      }
+
       const first = await fetch(target, init);
       if (first.status !== 402) return respond(first, null);
 
@@ -456,29 +564,77 @@ export function createTenderMcp(cfg: TenderMcpConfig) {
           return fail(`Token approval failed: ${e.shortMessage ?? e.message}. Nothing was paid.`);
         }
       }
-      const h = new Headers(init.headers);
-      h.set(HEADER_PAYMENT, encodeHeader(payload));
       // count the payment before sending it, so parallel calls and crashes can't overspend; give it back only if it clearly failed
       try {
         addSpent(price);
       } catch (e: any) {
         return fail(`Couldn't record today's spending: ${e.message}. Nothing was paid.`);
       }
-      let paid: Response;
-      try {
-        paid = await fetch(target, { ...init, headers: h });
-      } catch (e: any) {
-        return fail(`The API couldn't be reached after signing (${e.message}). The payment may or may not have settled, so ${money(price)} stays counted toward today's limit.`);
+      const encoded = encodeHeader(payload);
+      let attempt: Attempt | undefined;
+      if (akey) {
+        attempt = { req: reqId, payload: encoded, price: price.toString(), deadline: deadlineOf(payload), day: today(), status: "sent", createdAt: Date.now() };
+        try {
+          saveAttempt(akey, attempt);
+        } catch (e: any) {
+          addSpent(-price);
+          return fail(`Couldn't save this purchase for safe retries: ${e.message}. Nothing was paid.`);
+        }
       }
-      const settleHeader = paid.headers.get(HEADER_RESPONSE);
-      const settle = settleHeader ? decodeHeader<SettleResponse>(settleHeader) : null;
-      if ((settle && !settle.success) || (!settle && paid.status === 402)) addSpent(-price);
-      return respond(paid, settle ? { ...settle, price, tokenIn } : null);
+      return sendPaid(target, init, encoded, price, akey, attempt, extra.permit2 ?? cfg.permit2);
     }
   );
 
-  async function respond(res: Response, payment: (SettleResponse & { price: bigint; tokenIn: Address }) | null) {
-    const raw = await res.text();
+  /** Send a signed payment to the API and record the outcome. */
+  async function sendPaid(target: URL, init: RequestInit, encoded: string, price: bigint, akey: string | undefined, attempt: Attempt | undefined, permit2: Address) {
+    const h = new Headers(init.headers);
+    h.set(HEADER_PAYMENT, encoded);
+    let paid: Response;
+    try {
+      paid = await fetch(target, { ...init, headers: h });
+    } catch (e: any) {
+      return fail(
+        `The API couldn't be reached after signing (${e.message}). The payment may or may not have settled, so ${money(price)} stays counted toward today's limit.` +
+          (akey ? " Retry with the same idempotency_key: it resends the same signed payment, which can settle at most once." : "")
+      );
+    }
+    const raw = await paid.text();
+    const settleHeader = paid.headers.get(HEADER_RESPONSE);
+    const settle = settleHeader ? decodeHeader<SettleResponse>(settleHeader) : null;
+    const tokenIn = (decodeHeader<any>(encoded).payload?.permit?.permitted?.token ?? cfg.usdg) as Address;
+    const clearlyFailed = (settle && !settle.success) || (!settle && paid.status === 402);
+    if (clearlyFailed) {
+      // a resend can "fail" because its first send already settled; the chain knows
+      if (akey && attempt) {
+        const used = await nonceUsed(decodeHeader<any>(encoded), permit2).catch(() => undefined);
+        if (used) {
+          const settled: Attempt = { ...attempt, status: "settled" };
+          saveAttempt(akey, settled);
+          return alreadyPaid(settled);
+        }
+        if (used === false) saveAttempt(akey, null);
+      }
+      if (!attempt || attempt.day === today()) addSpent(-price);
+    } else if (akey && attempt && settle?.success) {
+      const link = cfg.explorer && settle.transaction ? `${cfg.explorer}/tx/${settle.transaction}` : settle.transaction;
+      saveAttempt(akey, { ...attempt, status: "settled", receipt: link, body: raw.slice(0, 8000) });
+    }
+    return respond(paid, settle ? { ...settle, price, tokenIn } : null, raw);
+  }
+
+  function alreadyPaid(a: Attempt) {
+    const lines = [`Already paid for this purchase (same idempotency_key). Nothing was paid again.`];
+    if (a.receipt) lines.push(`Receipt (on-chain, include this link when you tell the user about the payment): ${a.receipt}`);
+    if (a.body) lines.push("", "The API's response from the original payment:", a.body);
+    else lines.push("The earlier attempt settled, but its response was lost in transit.");
+    return {
+      content: [{ type: "text" as const, text: lines.join("\n") }],
+      structuredContent: { paid: false, alreadyPaid: true, priceUsd: formatUnits(BigInt(a.price), 6), receiptUrl: a.receipt, body: a.body },
+    };
+  }
+
+  async function respond(res: Response, payment: (SettleResponse & { price: bigint; tokenIn: Address }) | null, rawText?: string) {
+    const raw = rawText ?? (await res.text());
     const shown = raw.length > 8000 ? raw.slice(0, 8000) + `\n… (${raw.length - 8000} more characters)` : raw;
     const lines = [`HTTP ${res.status}`];
     const structured: Record<string, unknown> = { status: res.status };

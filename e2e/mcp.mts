@@ -247,6 +247,34 @@ async function main() {
     check("non-http URL refused", bad.err);
     const w2 = await T("wallet");
     check("wallet shows $0.10 spent", w2.s.spentTodayUsd === "0.1", String(w2.s.spentTodayUsd));
+
+    console.log("\n5. idempotency_key");
+    // fresh ledger so these payments have budget of their own
+    const STATE2 = path.join(path.dirname(STATE), "idem", "spend.json");
+    const { server: s4 } = createTenderMcp(configFromEnv({
+      TENDER_PRIVATE_KEY: agentKey, TENDER_PAY_WITH: meme, TENDER_CHAIN_ID: "31337", TENDER_RPC_URL: RPC, TENDER_FACILITATOR: FAC,
+      TENDER_USDG: usdg, TENDER_PERMIT2: permit2, TENDER_MAX_PER_CALL_USD: "0.10", TENDER_DAILY_LIMIT_USD: "1.00",
+      TENDER_ALLOW_HTTP: "true", TENDER_STATE_FILE: STATE2,
+    } as any));
+    const [ct4, st4] = InMemoryTransport.createLinkedPair();
+    await s4.connect(st4);
+    const client4 = new Client({ name: "idem", version: "1" });
+    await client4.connect(ct4);
+    const T4 = async (args: Record<string, unknown>) => {
+      const r: any = await client4.callTool({ name: "pay", arguments: args });
+      return { text: r.content.map((c: any) => c.text).join("\n"), s: r.structuredContent ?? {}, err: !!r.isError };
+    };
+    const i1 = await T4({ url: URL_, idempotency_key: "order-1" });
+    check("first payment with a key settles", !i1.err && i1.s.paid === true, i1.text.split("\n").slice(0, 2).join(" | "));
+    check("merchant got the $0.05", (await bal(usdg, merchant)) === 150_000n);
+    const i2 = await T4({ url: URL_, idempotency_key: "order-1" });
+    check("retry with the same key pays nothing again", !i2.err && i2.s.alreadyPaid === true && i2.text.includes("buy low, sell high"), i2.text.split("\n")[0]);
+    check("merchant balance unchanged after the retry", (await bal(usdg, merchant)) === 150_000n);
+    const i3 = await T4({ url: URL_ + "?other=1", idempotency_key: "order-1" });
+    check("same key for a different request is refused", i3.err && i3.text.includes("different request"), i3.text);
+    check("purchase saved for safe retries", fs.existsSync(path.join(path.dirname(STATE2), "payments.json")));
+    const i4 = await T4({ url: URL_, idempotency_key: "order-2" });
+    check("a new key is a new purchase", !i4.err && i4.s.paid === true && (await bal(usdg, merchant)) === 200_000n, i4.text.split("\n")[1]);
   } finally {
     servers.forEach((s) => s.close());
     node.kill();

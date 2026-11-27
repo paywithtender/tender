@@ -17,6 +17,8 @@ Works with Claude Desktop, Claude Code, Cursor, and any other MCP client.
 
 `pay` only spends when an API asks for payment, and never above your limits.
 
+**Safe retries.** Pass `idempotency_key` to `pay` (one key per purchase). If the agent retries after a timeout or error with the same key, Tender resends the exact same signed payment instead of signing a new one. Its Permit2 nonce is single-use on-chain, so the purchase settles at most once, however many times it's retried; a retry after success returns the original response without paying again. A new key is a new purchase and goes through the limits again.
+
 ## Setup
 
 Add this to your MCP client's config (for Claude Desktop, `claude_desktop_config.json`):
